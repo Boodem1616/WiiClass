@@ -1,0 +1,44 @@
+<NotificationsAllScreen>:
+    name: "notifications_all"
+    md_bg_color: 1, 1, 1, 1
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(8)
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(40)
+            spacing: dp(4)
+
+            MDIconButton:
+                icon: "arrow-left"
+                theme_text_color: "Custom"
+                text_color: 0.09, 0.16, 0.55, 1
+                pos_hint: {"center_y": 0.5}
+                on_release: app.volver_de_todas_notificaciones()
+
+            MDLabel:
+                text: "Notificaciones"
+                bold: True
+                font_style: "Headline"
+                role: "small"
+                theme_text_color: "Custom"
+                text_color: 0.09, 0.16, 0.55, 1
+
+            MDIconButton:
+                icon: "delete-sweep-outline"
+                theme_text_color: "Custom"
+                text_color: 0.09, 0.16, 0.55, 1
+                pos_hint: {"center_y": 0.5}
+                on_release: root.confirmar_limpiar()
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                id: lista
+                orientation: "vertical"
+                spacing: dp(10)
+                size_hint_y: None
+                height: self.minimum_height

@@ -1,0 +1,129 @@
+<WeekTab@MDButton>:
+    valor: None
+    activo: False
+    style: "filled" if root.activo else "outlined"
+    theme_bg_color: "Custom"
+    md_bg_color: (0.09, 0.16, 0.55, 1) if root.activo else (1, 1, 1, 1)
+    size_hint_x: None
+    width: label.texture_size[0] + dp(32)
+    height: dp(38)
+    padding: dp(4), 0
+
+    MDButtonText:
+        id: label
+        text: "Todas"
+        text_color: (1, 1, 1, 1) if root.activo else (0.1, 0.1, 0.1, 1)
+
+<ClaseRow>:
+    orientation: "horizontal"
+    padding: dp(10), dp(10), dp(46), dp(10)
+    spacing: dp(12)
+    canvas.before:
+        Color:
+            rgba: (0.9, 0.93, 1, 1) if root.seleccionada else (1, 1, 1, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+
+    MDIcon:
+        icon:
+            ("checkbox-marked-circle" if root.seleccionada else "checkbox-blank-circle-outline") \
+            if root.modo_seleccion else "play-circle"
+        theme_text_color: "Custom"
+        text_color: 0.09, 0.16, 0.55, 1
+        font_size: "30sp"
+
+    BoxLayout:
+        orientation: "vertical"
+        MDLabel:
+            text: root.titulo
+            bold: True
+            font_style: "Title"
+            role: "small"
+
+        MDLabel:
+            text: root.fecha + "   •   " + root.duracion_txt
+            theme_text_color: "Secondary"
+            font_style: "Body"
+            role: "small"
+
+<CategoryScreen>:
+    name: "category_screen"
+    md_bg_color: 1, 1, 1, 1
+
+    BoxLayout:
+        orientation: "vertical"
+
+        # ---- Barra normal (arriba a la izq: volver, título) ----
+        MDTopAppBar:
+            id: topbar
+            type: "small"
+            theme_bg_color: "Custom"
+            md_bg_color: 1, 1, 1, 1
+            opacity: 0 if root.modo_seleccion else 1
+            disabled: root.modo_seleccion
+            size_hint_y: None
+            height: 0 if root.modo_seleccion else dp(64)
+
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "arrow-left"
+                    on_release: app.volver_a_inicio()
+
+            MDTopAppBarTitle:
+                id: topbar_title
+                text: "Categoría"
+                text_color: 0.1, 0.1, 0.4, 1
+
+        # ---- Barra de selección múltiple (reemplaza a la normal) ----
+        BoxLayout:
+            size_hint_y: None
+            height: dp(64) if root.modo_seleccion else 0
+            opacity: 1 if root.modo_seleccion else 0
+            disabled: not root.modo_seleccion
+            padding: dp(8), 0
+
+            MDIconButton:
+                icon: "close"
+                theme_text_color: "Custom"
+                text_color: 0.1, 0.1, 0.4, 1
+                pos_hint: {"center_y": 0.5}
+                on_release: root.salir_de_seleccion()
+
+            MDLabel:
+                text: f"{root.num_seleccionadas} seleccionada(s)"
+                theme_text_color: "Custom"
+                text_color: 0.1, 0.1, 0.4, 1
+                bold: True
+
+            MDIconButton:
+                icon: "download-outline"
+                theme_text_color: "Custom"
+                text_color: 0.09, 0.16, 0.55, 1
+                pos_hint: {"center_y": 0.5}
+                on_release: root.descargar_seleccionadas()
+
+        # ---- Pestañas de semana ----
+        ScrollView:
+            do_scroll_y: False
+            size_hint_y: None
+            height: dp(46)
+
+            BoxLayout:
+                id: semanas_row
+                orientation: "horizontal"
+                spacing: dp(8)
+                padding: dp(16), dp(4)
+                size_hint_x: None
+                width: self.minimum_width
+
+        ScrollView:
+            do_scroll_x: False
+            BoxLayout:
+                id: lista_clases
+                orientation: "vertical"
+                spacing: dp(10)
+                padding: dp(16)
+                size_hint_y: None
+                height: self.minimum_height

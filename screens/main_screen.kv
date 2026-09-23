@@ -1,0 +1,14 @@
+<MainScreen>:
+    name: "main"
+    md_bg_color: 1, 1, 1, 1
+
+    BoxLayout:
+        orientation: "vertical"
+
+        MDScreenManager:
+            id: content_manager
+
+        MDNavigationBar:
+            id: bottom_nav
+            md_bg_color: 1, 1, 1, 1
+            on_switch_tabs: root.on_switch_tabs(*args)

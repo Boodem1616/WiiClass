@@ -1,0 +1,102 @@
+<CategoryCard@MDCard>:
+    categoria_id: 0
+    nombre: ""
+    grupo: ""
+    icono: "book-outline"
+    size_hint: None, None
+    size: dp(150), dp(120)
+    padding: dp(12)
+    radius: [18, 18, 18, 18]
+    ripple_behavior: True
+    orientation: "vertical"
+    theme_bg_color: "Custom"
+    md_bg_color: 1, 1, 1, 1
+    style: "elevated"
+    on_release: app.abrir_categoria(self.categoria_id, self.nombre)
+
+    MDIcon:
+        icon: root.icono
+        theme_text_color: "Custom"
+        text_color: 0.09, 0.16, 0.55, 1
+        font_size: "26sp"
+
+    Widget:
+        size_hint_y: None
+        height: dp(8)
+
+    MDLabel:
+        text: root.nombre
+        bold: True
+        font_style: "Title"
+        role: "small"
+        shorten: True
+        shorten_from: "right"
+
+    MDLabel:
+        text: root.grupo
+        theme_text_color: "Secondary"
+        font_style: "Body"
+        role: "small"
+
+<HomeTab>:
+    name: "home_tab"
+    md_bg_color: 1, 1, 1, 1
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(16)
+        spacing: dp(12)
+
+        MDLabel:
+            id: saludo
+            text: "¡Hola de nuevo!"
+            font_style: "Body"
+            role: "small"
+            theme_text_color: "Secondary"
+            size_hint_y: None
+            height: dp(18)
+
+        MDLabel:
+            id: nombre_usuario
+            text: ""
+            font_style: "Title"
+            role: "large"
+            bold: True
+            size_hint_y: None
+            height: dp(32)
+
+        MDCard:
+            theme_bg_color: "Custom"
+            md_bg_color: 0.09, 0.16, 0.55, 1
+            radius: [18, 18, 18, 18]
+            size_hint_y: None
+            height: dp(90)
+            padding: dp(16)
+            orientation: "vertical"
+            style: "filled"
+
+            MDLabel:
+                text: "Clases Recientes"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                font_style: "Title"
+                role: "small"
+
+            MDLabel:
+                text: "Revisa las últimas grabaciones subidas por tus docentes."
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 0.85
+                font_style: "Body"
+                role: "small"
+
+        ScrollView:
+            do_scroll_x: False
+            do_scroll_y: True
+            BoxLayout:
+                id: categorias_container
+                orientation: "vertical"
+                spacing: dp(18)
+                size_hint_y: None
+                height: self.minimum_height
+                padding: 0, dp(4)

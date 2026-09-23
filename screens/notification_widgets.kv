@@ -1,0 +1,43 @@
+<NotificationRow@MDCard>:
+    mensaje: ""
+    tipo: "nueva_grabacion"
+    fecha_txt: ""
+    leida: False
+    orientation: "horizontal"
+    padding: dp(12)
+    spacing: dp(12)
+    radius: [16, 16, 16, 16]
+    style: "filled"
+    theme_bg_color: "Custom"
+    md_bg_color: (1, 1, 1, 1) if root.leida else (0.93, 0.96, 1, 1)
+
+    MDIcon:
+        icon: "check-circle" if root.tipo == "descarga_completada" else "microphone"
+        theme_text_color: "Custom"
+        text_color: (0.2, 0.7, 0.3, 1) if root.tipo == "descarga_completada" else (0.09, 0.16, 0.55, 1)
+        font_size: "26sp"
+        size_hint_x: None
+        width: dp(36)
+
+    BoxLayout:
+        orientation: "vertical"
+        MDLabel:
+            text: ("Descarga completada" if root.tipo == "descarga_completada" else "Nueva grabación disponible")
+            bold: True
+            font_style: "Title"
+            role: "small"
+        MDLabel:
+            text: root.mensaje
+            theme_text_color: "Secondary"
+            font_style: "Body"
+            role: "small"
+            shorten: True
+
+    MDLabel:
+        text: root.fecha_txt
+        theme_text_color: "Secondary"
+        font_style: "Body"
+        role: "small"
+        size_hint_x: None
+        width: dp(70)
+        halign: "right"

@@ -1,0 +1,166 @@
+<SpeedButton@MDButton>:
+    value: 1.0
+    active: False
+    style: "filled" if root.active else "outlined"
+    theme_bg_color: "Custom"
+    md_bg_color: (0.09, 0.16, 0.55, 1) if root.active else (1, 1, 1, 1)
+
+    MDButtonText:
+        id: speed_label
+        text: "1.0x"
+        text_color: (1, 1, 1, 1) if root.active else (0.1, 0.1, 0.1, 1)
+
+<PlayerScreen>:
+    name: "player_screen"
+    md_bg_color: 0.96, 0.97, 1, 1
+
+    BoxLayout:
+        orientation: "vertical"
+
+        MDTopAppBar:
+            type: "small"
+            theme_bg_color: "Custom"
+            md_bg_color: 0.96, 0.97, 1, 1
+
+            MDTopAppBarLeadingButtonContainer:
+                MDActionTopAppBarButton:
+                    icon: "arrow-left"
+                    on_release: app.volver_desde_reproductor()
+
+            MDTopAppBarTitle:
+                text: "Reproduciendo"
+                text_color: 0.1, 0.1, 0.4, 1
+
+        BoxLayout:
+            orientation: "vertical"
+            padding: dp(20), dp(6), dp(20), dp(16)
+            spacing: dp(10)
+
+            MDCard:
+                id: cover
+                size_hint_y: None
+                height: dp(220)
+                radius: [22, 22, 22, 22]
+                theme_bg_color: "Custom"
+                md_bg_color: 0.13, 0.32, 0.82, 1
+                padding: dp(16)
+                orientation: "vertical"
+                style: "filled"
+
+                AnchorLayout:
+                    anchor_x: "left"
+                    anchor_y: "top"
+                    size_hint_y: None
+                    height: dp(46)
+
+                    MDCard:
+                        size_hint: None, None
+                        size: dp(46), dp(46)
+                        radius: [dp(12)]
+                        theme_bg_color: "Custom"
+                        md_bg_color: 1, 1, 1, 0.25
+                        style: "filled"
+
+                        MDIcon:
+                            id: icono_categoria
+                            icon: "book-outline"
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                            theme_text_color: "Custom"
+                            text_color: 1, 1, 1, 1
+                            font_size: "22sp"
+
+                Widget:
+
+                MDLabel:
+                    id: titulo_clase
+                    text: ""
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+                    font_style: "Title"
+                    role: "medium"
+                    size_hint_y: None
+                    height: dp(30)
+
+                MDLabel:
+                    id: subtitulo_clase
+                    text: ""
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 0.85
+                    font_style: "Body"
+                    role: "small"
+                    size_hint_y: None
+                    height: dp(20)
+
+            MDSlider:
+                id: slider
+                min: 0
+                max: 100
+                value: 0
+                size_hint_y: None
+                height: dp(24)
+                track_active_color: 0.09, 0.16, 0.55, 1
+                track_inactive_color: 0.85, 0.86, 0.92, 1
+                on_touch_up: root.on_slider_release(*args)
+
+                MDSliderHandle:
+                    theme_bg_color: "Custom"
+                    md_bg_color: 0.09, 0.16, 0.55, 1
+
+            BoxLayout:
+                size_hint_y: None
+                height: dp(20)
+                MDLabel:
+                    id: lbl_pos
+                    text: "00:00"
+                    font_style: "Body"
+                    role: "small"
+                Widget:
+                MDLabel:
+                    id: lbl_dur
+                    text: "00:00"
+                    font_style: "Body"
+                    role: "small"
+                    halign: "right"
+
+            BoxLayout:
+                size_hint_y: None
+                height: dp(64)
+                spacing: dp(36)
+                padding: dp(16), 0
+
+                Widget:
+
+                MDIconButton:
+                    icon: "skip-previous"
+                    font_size: "30sp"
+                    on_release: root.saltar_inicio()
+
+                MDIconButton:
+                    id: btn_play
+                    icon: "play-circle"
+                    font_size: "56sp"
+                    theme_text_color: "Custom"
+                    text_color: 0.09, 0.16, 0.55, 1
+                    on_release: root.toggle_play()
+
+                MDIconButton:
+                    icon: "skip-next"
+                    font_size: "30sp"
+                    on_release: root.saltar_siguiente()
+
+                Widget:
+
+            BoxLayout:
+                id: speed_row
+                size_hint_y: None
+                height: dp(44)
+                spacing: dp(10)
+                padding: dp(10), 0
+
+            Widget:
+                # Espaciador flexible: absorbe el espacio sobrante al FINAL
+                # de la columna. Sin esto, Kivy deja todo el espacio libre
+                # ARRIBA del primer hijo (la portada) en vez de abajo del
+                # último — empujando la portada hacia abajo en vez de
+                # dejarla pegada al app bar.

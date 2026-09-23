@@ -1,0 +1,114 @@
+<ProfileField@MDBoxLayout>:
+    label: ""
+    value: ""
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(56)
+    padding: dp(12), dp(6)
+
+    MDLabel:
+        text: root.label
+        font_style: "Body"
+        role: "small"
+        theme_text_color: "Secondary"
+        size_hint_y: None
+        height: dp(16)
+
+    MDLabel:
+        text: root.value
+        bold: True
+        theme_text_color: "Custom"
+        text_color: 0.09, 0.16, 0.55, 1
+
+<ProfileTab>:
+    name: "profile_tab"
+    md_bg_color: 1, 1, 1, 1
+
+    BoxLayout:
+        orientation: "vertical"
+        padding: dp(24)
+        spacing: dp(16)
+
+        MDLabel:
+            text: "Mi Perfil"
+            bold: True
+            font_style: "Headline"
+            role: "small"
+            theme_text_color: "Custom"
+            text_color: 0.09, 0.16, 0.55, 1
+            size_hint_y: None
+            height: dp(40)
+
+        MDCard:
+            size_hint: None, None
+            size: dp(96), dp(96)
+            pos_hint: {"center_x": 0.5}
+            radius: [48, 48, 48, 48]
+            theme_bg_color: "Custom"
+            md_bg_color: 0.85, 0.9, 1, 1
+            style: "filled"
+
+            MDLabel:
+                id: iniciales
+                text: ""
+                halign: "center"
+                valign: "center"
+                bold: True
+                font_style: "Headline"
+                role: "small"
+                theme_text_color: "Custom"
+                text_color: 0.09, 0.16, 0.55, 1
+
+        MDLabel:
+            id: nombre_lbl
+            text: ""
+            halign: "center"
+            bold: True
+            font_style: "Title"
+            role: "medium"
+            size_hint_y: None
+            height: dp(30)
+
+        MDLabel:
+            id: rol_lbl
+            text: "Estudiante de Pregrado"
+            halign: "center"
+            theme_text_color: "Secondary"
+            font_style: "Body"
+            role: "small"
+            size_hint_y: None
+            height: dp(20)
+
+        MDCard:
+            orientation: "vertical"
+            radius: [18, 18, 18, 18]
+            padding: dp(8)
+            size_hint_y: None
+            height: dp(190)
+            theme_bg_color: "Custom"
+            md_bg_color: 1, 1, 1, 1
+            style: "elevated"
+
+            ProfileField:
+                id: campo_nombre
+                label: "NOMBRE COMPLETO"
+
+            ProfileField:
+                id: campo_fecha
+                label: "FECHA DE NACIMIENTO"
+
+            ProfileField:
+                id: campo_institucion
+                label: "ESTABLECIMIENTO UNIVERSITARIO"
+
+        Widget:
+
+        MDButton:
+            style: "outlined"
+            pos_hint: {"center_x": 0.5}
+            line_color: 0.8, 0.15, 0.15, 1
+            on_release: app.cerrar_sesion()
+
+            MDButtonText:
+                text: "Cerrar Sesión"
+                text_color: 0.8, 0.15, 0.15, 1

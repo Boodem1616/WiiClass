@@ -1,0 +1,222 @@
+#:import dp kivy.metrics.dp
+
+<PillField@BoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(52)
+    padding: dp(14), 0
+    spacing: dp(10)
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 0.14
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+
+<LoginScreen>:
+    name: "login"
+
+    FloatLayout:
+        id: root_layout
+
+        FloatLayout:
+            id: notebook_layer
+            size: root.size
+            pos: root.pos
+
+        BoxLayout:
+            orientation: "vertical"
+            size_hint: 0.84, None
+            height: self.minimum_height
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            spacing: dp(6)
+
+            # ---- Logo ----
+            AnchorLayout:
+                size_hint_y: None
+                height: dp(96)
+                anchor_x: "center"
+
+                MDCard:
+                    size_hint: None, None
+                    size: dp(72), dp(72)
+                    radius: [dp(20)]
+                    theme_bg_color: "Custom"
+                    md_bg_color: 1, 1, 1, 1
+                    style: "filled"
+
+                    MDIcon:
+                        icon: "microphone-outline"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                        theme_text_color: "Custom"
+                        text_color: 0.09, 0.16, 0.55, 1
+                        font_size: "34sp"
+
+            MDLabel:
+                text: "WiiClass"
+                halign: "center"
+                bold: True
+                font_style: "Headline"
+                role: "small"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                size_hint_y: None
+                height: dp(38)
+
+            MDLabel:
+                text: "Grabaciones de Clases"
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 0.8, 0.85, 0.97, 1
+                font_style: "Body"
+                role: "medium"
+                size_hint_y: None
+                height: dp(28)
+
+            Widget:
+                size_hint_y: None
+                height: dp(10)
+
+            # ---- Institución ----
+            MDLabel:
+                text: "Institución"
+                theme_text_color: "Custom"
+                text_color: 0.75, 0.8, 0.95, 1
+                font_style: "Body"
+                role: "small"
+                size_hint_y: None
+                height: dp(20)
+
+            PillField:
+                id: institucion_field
+                on_touch_down: if self.collide_point(*args[1].pos): root.abrir_menu_instituciones(self)
+
+                MDLabel:
+                    id: institucion_label
+                    text: root.institucion_seleccionada or "Selecciona tu institución"
+                    theme_text_color: "Custom"
+                    text_color: 0.9, 0.92, 1, 1
+
+                MDIcon:
+                    icon: "chevron-down"
+                    theme_text_color: "Custom"
+                    text_color: 0.85, 0.88, 0.97, 1
+                    size_hint_x: None
+                    width: dp(24)
+
+            Widget:
+                size_hint_y: None
+                height: dp(6)
+
+            # ---- Correo institucional ----
+            MDLabel:
+                text: "Correo Institucional"
+                theme_text_color: "Custom"
+                text_color: 0.75, 0.8, 0.95, 1
+                font_style: "Body"
+                role: "small"
+                size_hint_y: None
+                height: dp(20)
+
+            PillField:
+                MDIcon:
+                    icon: "email-outline"
+                    theme_text_color: "Custom"
+                    text_color: 0.85, 0.88, 0.97, 1
+                    size_hint_x: None
+                    width: dp(24)
+
+                TextInput:
+                    id: correo
+                    hint_text: "sflores@uct.cl"
+                    hint_text_color: 0.65, 0.7, 0.88, 1
+                    foreground_color: 0.92, 0.94, 1, 1
+                    cursor_color: 1, 1, 1, 1
+                    background_color: 0, 0, 0, 0
+                    background_normal: ""
+                    background_active: ""
+                    multiline: False
+                    padding: [0, dp(14), 0, 0]
+                    font_size: "15sp"
+
+            Widget:
+                size_hint_y: None
+                height: dp(6)
+
+            # ---- Contraseña ----
+            MDLabel:
+                text: "Contraseña"
+                theme_text_color: "Custom"
+                text_color: 0.75, 0.8, 0.95, 1
+                font_style: "Body"
+                role: "small"
+                size_hint_y: None
+                height: dp(20)
+
+            PillField:
+                MDIcon:
+                    icon: "lock-outline"
+                    theme_text_color: "Custom"
+                    text_color: 0.85, 0.88, 0.97, 1
+                    size_hint_x: None
+                    width: dp(24)
+
+                TextInput:
+                    id: password
+                    hint_text: "Contraseña"
+                    hint_text_color: 0.65, 0.7, 0.88, 1
+                    foreground_color: 0.92, 0.94, 1, 1
+                    cursor_color: 1, 1, 1, 1
+                    background_color: 0, 0, 0, 0
+                    background_normal: ""
+                    background_active: ""
+                    multiline: False
+                    password: True
+                    padding: [0, dp(14), 0, 0]
+                    font_size: "15sp"
+
+                MDIconButton:
+                    id: toggle_password
+                    icon: "eye-outline"
+                    theme_text_color: "Custom"
+                    text_color: 0.85, 0.88, 0.97, 1
+                    on_release: root.toggle_password_visibility()
+
+            Widget:
+                size_hint_y: None
+                height: dp(14)
+
+            # ---- Botón de inicio de sesión ----
+            MDButton:
+                style: "filled"
+                theme_bg_color: "Custom"
+                md_bg_color: 1, 1, 1, 1
+                size_hint_x: 1
+                theme_width: "Custom"
+                radius: [dp(16)]
+                height: dp(50)
+                size_hint_y: None
+                pos_hint: {"center_x": 0.5}
+                on_release: root.iniciar_sesion()
+
+                MDButtonText:
+                    text: "Iniciar Sesión"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 0.09, 0.16, 0.55, 1
+                    halign: "center"
+
+            Widget:
+                size_hint_y: None
+                height: dp(10)
+
+            MDLabel:
+                text: "¿Olvidaste tu contraseña?"
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 0.75, 0.8, 0.95, 1
+                font_style: "Body"
+                role: "small"
+                size_hint_y: None
+                height: dp(24)
