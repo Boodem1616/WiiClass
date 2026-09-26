@@ -16,6 +16,9 @@
 
 <ClaseRow>:
     orientation: "horizontal"
+    size_hint_x: 1
+    size_hint_y: None
+    height: dp(76)
     padding: dp(10), dp(10), dp(46), dp(10)
     spacing: dp(12)
     canvas.before:
@@ -27,6 +30,8 @@
             radius: [dp(14)]
 
     MDIcon:
+        size_hint_x: None
+        width: dp(34)
         icon:
             ("checkbox-marked-circle" if root.seleccionada else "checkbox-blank-circle-outline") \
             if root.modo_seleccion else "play-circle"
@@ -36,17 +41,20 @@
 
     BoxLayout:
         orientation: "vertical"
+        size_hint_x: 1
         MDLabel:
             text: root.titulo
             bold: True
             font_style: "Title"
             role: "small"
+            size_hint_y: 1
 
         MDLabel:
             text: root.fecha + "   •   " + root.duracion_txt
             theme_text_color: "Secondary"
             font_style: "Body"
             role: "small"
+            size_hint_y: 1
 
 <CategoryScreen>:
     name: "category_screen"

@@ -87,6 +87,7 @@ def init_db(seed: bool = True):
     cur = conn.execute("SELECT COUNT(*) AS c FROM Instituciones")
     if seed and cur.fetchone()["c"] == 0:
         _seed_demo_data(conn)
+    cur.close()
     conn.close()
 
     # Se recalcula siempre (es determinístico e idempotente): así, si se

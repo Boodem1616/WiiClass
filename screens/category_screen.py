@@ -143,6 +143,7 @@ class ClaseRowSlot(FloatLayout):
 
     def __init__(self, screen, grabacion, **kwargs):
         super().__init__(**kwargs)
+        self.size_hint_x = 1
         self.size_hint_y = None
         self.height = ALTO_FILA
         self.grabacion_id = grabacion["id"]
@@ -163,6 +164,8 @@ class ClaseRowSlot(FloatLayout):
             pos=(0, 0),
         )
         self.add_widget(self.row)
+        self.bind(size=self._sincronizar_fila, pos=self._sincronizar_fila)
+        self._sincronizar_fila()
 
         self.boton_descarga = MDIconButton(
             icon="check-circle" if self.row.descargada else "download-outline",
@@ -179,6 +182,10 @@ class ClaseRowSlot(FloatLayout):
         # prioridad de recepción del touch sobre la tarjeta que está
         # debajo, así que un toque ahí nunca llega a `ClaseRow`).
         self.add_widget(self.boton_descarga)
+
+    def _sincronizar_fila(self, *_args):
+        self.row.pos = self.pos
+        self.row.size = self.size
 
 
 class CategoryScreen(MDScreen):
