@@ -31,9 +31,11 @@ from kivymd.uix.dialog import (
 )
 from kivymd.uix.button import MDButton, MDButtonText
 
+import theme
+
 Builder.load_file(os.path.join(os.path.dirname(__file__), "notification_widgets.kv"))
 
-ALTO_FILA = dp(72)
+ALTO_FILA = dp(76)
 UMBRAL_DESCARTE = 0.32  # fracción del ancho que hay que arrastrar para descartar
 
 
@@ -123,7 +125,9 @@ def construir_fila(notificacion, on_dismiss):
     card = Factory.NotificationRow()
     card.mensaje = notificacion["mensaje"]
     card.tipo = notificacion["tipo"]
-    card.fecha_txt = ""
+    # Antes esto era siempre "" (la fecha existía en la BD pero nunca se
+    # mostraba, y la etiqueta reservaba 70dp en blanco). Ahora: "hace 5 min".
+    card.fecha_txt = theme.tiempo_relativo(notificacion["fecha"])
     card.leida = bool(notificacion["leida"])
     wrapper.set_card(card)
     return wrapper

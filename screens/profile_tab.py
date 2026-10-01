@@ -14,6 +14,8 @@ from kivy.metrics import dp
 
 from kivymd.uix.screen import MDScreen
 
+import theme
+
 Builder.load_file(os.path.join(os.path.dirname(__file__), "profile_tab.kv"))
 
 
@@ -31,9 +33,7 @@ class ProfileTab(MDScreen):
         self.ids.campo_nombre.value = u["nombre"]
         self.ids.campo_fecha.value = self._fmt_fecha(u["fecha_nac"])
         self.ids.campo_institucion.value = u["institucion_nombre"]
-        partes = u["nombre"].split()
-        iniciales = "".join(p[0] for p in partes[:2]).upper()
-        self.ids.iniciales.text = iniciales
+        self.ids.iniciales.text = theme.iniciales(u["nombre"])
 
     @staticmethod
     def _fmt_fecha(fecha_iso: str) -> str:

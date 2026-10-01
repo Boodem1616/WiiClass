@@ -1,0 +1,118 @@
+# common.kv — Componentes de estilo compartidos por todas las pantallas.
+# Los colores salen de theme.py (fuente única de la paleta).
+#:import T theme
+
+# ---- Textos ----------------------------------------------------------
+<TextoTitulo@MDLabel>:
+    bold: True
+    font_style: "Title"
+    role: "small"
+    theme_text_color: "Custom"
+    text_color: T.TEXT
+
+<TextoSuave@MDLabel>:
+    font_style: "Body"
+    role: "small"
+    theme_text_color: "Custom"
+    text_color: T.TEXT_SOFT
+
+<TituloSeccion@MDLabel>:
+    bold: True
+    font_style: "Title"
+    role: "medium"
+    theme_text_color: "Custom"
+    text_color: T.TEXT
+    size_hint_y: None
+    height: dp(30)
+
+# Textos blancos para usar sobre el degradado azul de las cabeceras.
+<TituloCabecera@MDLabel>:
+    bold: True
+    font_style: "Headline"
+    role: "small"
+    theme_text_color: "Custom"
+    text_color: 1, 1, 1, 1
+    size_hint_y: None
+    height: dp(36)
+
+<SubtituloCabecera@MDLabel>:
+    font_style: "Body"
+    role: "medium"
+    theme_text_color: "Custom"
+    text_color: 1, 1, 1, 0.78
+    size_hint_y: None
+    height: dp(20)
+
+# ---- Botones de ícono -------------------------------------------------
+# Se fijan los colores con AMBOS juegos de propiedades (icon_color y
+# text_color) porque KivyMD 2.0 fue renombrando cuál usa MDIconButton;
+# así el color se aplica sin importar la versión 2.0.x instalada.
+<BotonCabecera@MDIconButton>:
+    size_hint: None, None
+    size: dp(48), dp(48)
+    pos_hint: {"center_y": 0.5}
+    theme_icon_color: "Custom"
+    icon_color: 1, 1, 1, 1
+    theme_text_color: "Custom"
+    text_color: 1, 1, 1, 1
+
+<BotonPlano@MDIconButton>:
+    theme_icon_color: "Custom"
+    icon_color: T.PRIMARY
+    theme_text_color: "Custom"
+    text_color: T.PRIMARY
+
+# ---- Tarjetas ----------------------------------------------------------
+# Tarjeta plana con borde fino: se dibuja a mano en canvas (sin MDCard ni
+# ripple), por la misma razón que ClaseRow (ver category_screen.py).
+<Tarjeta@BoxLayout>:
+    canvas.before:
+        Color:
+            rgba: T.OUTLINE
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(16)]
+        Color:
+            rgba: T.SURFACE
+        RoundedRectangle:
+            pos: self.x + dp(1), self.y + dp(1)
+            size: self.width - dp(2), self.height - dp(2)
+            radius: [dp(15)]
+
+# Igual que Tarjeta pero tocable; se oscurece un poco mientras se presiona.
+<TarjetaToque@ButtonBehavior+BoxLayout>:
+    canvas.before:
+        Color:
+            rgba: T.OUTLINE
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(16)]
+        Color:
+            rgba: T.MIST if self.state == "down" else T.SURFACE
+        RoundedRectangle:
+            pos: self.x + dp(1), self.y + dp(1)
+            size: self.width - dp(2), self.height - dp(2)
+            radius: [dp(15)]
+
+# ---- Hoja redondeada bajo una cabecera --------------------------------
+# Truco visual: primero se pinta una franja del color final del degradado
+# en la parte superior, y encima un rectángulo redondeado color papel. Las
+# esquinas redondeadas dejan ver la franja azul, y la cabecera parece
+# "continuar" dentro de la hoja. El rectángulo se extiende 30dp hacia
+# abajo para ocultar las esquinas inferiores redondeadas (esa zona queda
+# tapada por la barra de navegación o fuera de pantalla).
+<Hoja@BoxLayout>:
+    canvas.before:
+        Color:
+            rgba: T.GRAD_BOTTOM_RGBA
+        Rectangle:
+            pos: self.x, self.top - dp(28)
+            size: self.width, dp(28)
+        Color:
+            rgba: T.BG
+        RoundedRectangle:
+            pos: self.x, self.y - dp(30)
+            size: self.width, self.height + dp(30)
+            radius: [dp(26)]

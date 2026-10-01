@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+wiiclass.db
+descargas/
+.buildozer/
+bin/
+*.apk
+.DS_Store

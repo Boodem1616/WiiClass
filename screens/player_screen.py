@@ -4,8 +4,10 @@ Tab Descargas, ya que la especificación pide "el mismo reproductor").
 
 Controles:
   - Play / Pausa
-  - Saltar al inicio
-  - Saltar a la siguiente clase de la misma categoría
+  - Anterior: si la clase lleva más de 3 s, vuelve al inicio; si no, salta a
+    la clase anterior de la categoría (como cualquier reproductor de música)
+  - Retroceder / adelantar 10 s (muy usado para repasar una explicación)
+  - Siguiente clase de la misma categoría
   - Control de velocidad: botones fijos 0.5x / 1.0x / 1.5x / 2.0x
 
 Compatible con KivyMD 2.0.0.
@@ -22,6 +24,7 @@ from kivymd.uix.screen import MDScreen
 
 import db
 from audio_player import audio_engine
+from screens.widgets import mostrar_aviso
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "player_screen.kv"))
 
@@ -32,6 +35,10 @@ class PlayerScreen(MDScreen):
     grabacion_actual = None
 
     def on_kv_post(self, base_widget):
+        # True mientras el dedo está sobre la barra de progreso. Mientras
+        # tanto, el ciclo de UI NO debe reescribir el valor del slider (antes
+        # peleaba con el dedo y la perilla "saltaba" hacia atrás al arrastrar).
+        self._arrastrando_slider = False
         self._build_speed_buttons()
         Clock.schedule_interval(self._actualizar_ui, 0.3)
         # Reacciona a los cambios de estado del motor de audio (que ahora
@@ -51,7 +58,7 @@ class PlayerScreen(MDScreen):
             btn = Factory.SpeedButton()
             btn.value = s
             btn.active = (s == 1.0)
-            btn.ids.speed_label.text = f"{s}x"
+            btn.texto = f"{s}x"
             btn.bind(on_release=lambda inst, sp=s: self.set_speed(sp))
             row.add_widget(btn)
             self._speed_buttons[s] = btn
@@ -68,9 +75,16 @@ class PlayerScreen(MDScreen):
         except Exception:
             pass
 
-        # Lista ordenada de clases de la misma categoría, para que el
-        # botón "siguiente" sepa cuál viene después de la actual.
-        self._lista_categoria = db.get_grabaciones_por_categoria(grab["categoria_id"])
+        # Lista ordenada de clases de la misma categoría, para que los
+        # botones anterior/siguiente sepan cuál es cuál. Sin conexión solo se
+        # consideran las clases ya descargadas: antes "siguiente" intentaba
+        # abrir una clase que no estaba en el teléfono y no sonaba nada.
+        from kivy.app import App
+        lista = db.get_grabaciones_por_categoria(grab["categoria_id"])
+        if App.get_running_app().offline:
+            descargadas = db.get_ids_descargados()
+            lista = [g for g in lista if g["id"] in descargadas or g["id"] == grabacion_id]
+        self._lista_categoria = lista
         self._indice_actual = next(
             (i for i, g in enumerate(self._lista_categoria) if g["id"] == grabacion_id), 0
         )
@@ -88,10 +102,20 @@ class PlayerScreen(MDScreen):
         self.ids.slider.value = 0
         self.ids.lbl_pos.text = "00:00"
         self.ids.lbl_dur.text = "00:00"
+        self.ids.onda.set_semilla(grabacion_id)  # cada clase tiene su "huella"
+        self.ids.onda.progress = 0
 
-        path = local_path or grab["url_audio"]
+        path = local_path or db.get_ruta_local(grabacion_id) or grab["url_audio"]
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(os.path.dirname(__file__)), path)
+
+        # Si el archivo no existe, avisar en vez de quedarse "reproduciendo"
+        # en silencio (ffpyplayer no siempre lanza error al abrir un archivo
+        # inexistente).
+        if not os.path.exists(path):
+            audio_engine.stop()
+            mostrar_aviso("No se encontró el audio de esta clase")
+            return
 
         # Vuelve siempre a 1.0x con cada clase nueva.
         audio_engine.speed = 1.0
@@ -112,7 +136,7 @@ class PlayerScreen(MDScreen):
             self.ids.btn_play.disabled = True
         else:
             self.ids.btn_play.disabled = False
-            self.ids.btn_play.icon = "pause-circle" if audio_engine.is_playing else "play-circle"
+            self.ids.btn_play.icon = "pause" if audio_engine.is_playing else "play"
 
     # ---- Controles ---------------------------------------------------
     def toggle_play(self):
@@ -120,31 +144,51 @@ class PlayerScreen(MDScreen):
             return
         audio_engine.toggle_play_pause()
 
-    def saltar_inicio(self):
-        audio_engine.restart()
+    def retroceder_10(self):
+        audio_engine.seek_relativo(-10)
+
+    def adelantar_10(self):
+        audio_engine.seek_relativo(10)
+
+    def saltar_anterior(self):
+        """Estilo reproductor de música: con más de 3 s reproducidos vuelve
+        al inicio de esta clase; si no, salta a la clase anterior."""
+        if audio_engine.position > 3:
+            audio_engine.restart()
+            return
+        self._ir_a_indice(getattr(self, "_indice_actual", 0) - 1)
 
     def saltar_siguiente(self):
         """Reproduce la siguiente clase de la misma categoría, si existe."""
+        self._ir_a_indice(getattr(self, "_indice_actual", 0) + 1)
+
+    def _ir_a_indice(self, indice: int):
         lista = getattr(self, "_lista_categoria", None)
-        if not lista:
-            return
-        siguiente_indice = self._indice_actual + 1
-        if siguiente_indice >= len(lista):
-            return  # ya es la última clase de la categoría
-        siguiente = lista[siguiente_indice]
+        if not lista or indice < 0 or indice >= len(lista):
+            return  # ya es la primera / última clase de la categoría
         # Ya estamos en PlayerScreen: solo recargamos la nueva grabación,
         # sin pasar por app.abrir_reproductor() (eso reescribiría a dónde
         # vuelve el botón "atrás", ya que se fija según la pantalla activa
-        # en ese momento).
-        self.cargar_grabacion(siguiente["id"])
+        # en ese momento). `cargar_grabacion` prefiere la copia descargada
+        # si existe (antes "siguiente" siempre usaba la ruta original).
+        self.cargar_grabacion(lista[indice]["id"])
 
     def set_speed(self, speed):
         audio_engine.set_speed(speed)
         for s, btn in self._speed_buttons.items():
             btn.active = (s == speed)
 
-    def on_slider_release(self, instance, touch):
+    def on_slider_press(self, instance, touch):
+        """El dedo tocó la barra: se pausa la actualización automática."""
         if instance.collide_point(*touch.pos):
+            self._arrastrando_slider = True
+
+    def on_slider_release(self, instance, touch):
+        """Al soltar, salta a la posición elegida. Se usa la bandera en vez
+        de `collide_point`: si el dedo se salía de la barra hacia arriba o
+        abajo antes de soltar, el salto se perdía y la perilla volvía atrás."""
+        if self._arrastrando_slider:
+            self._arrastrando_slider = False
             audio_engine.seek(instance.value)
 
     # ---- UI loop -------------------------------------------------
@@ -154,9 +198,12 @@ class PlayerScreen(MDScreen):
         dur = audio_engine.duration or 0
         pos = audio_engine.position or 0
         self.ids.slider.max = max(dur, 1)
-        self.ids.slider.value = pos
+        if not self._arrastrando_slider:
+            self.ids.slider.value = pos
         self.ids.lbl_pos.text = self._fmt(pos)
         self.ids.lbl_dur.text = self._fmt(dur)
+        # La onda decorativa avanza junto con la reproducción.
+        self.ids.onda.progress = (pos / dur) if dur else 0
 
     @staticmethod
     def _fmt(seconds):

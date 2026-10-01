@@ -1,102 +1,165 @@
-<CategoryCard@MDCard>:
+#:import T theme
+
+# Tarjeta de categoría: ficha con ícono, nombre y cantidad de clases.
+<CategoryCard@TarjetaToque>:
     categoria_id: 0
     nombre: ""
     grupo: ""
     icono: "book-outline"
-    size_hint: None, None
-    size: dp(150), dp(120)
-    padding: dp(12)
-    radius: [18, 18, 18, 18]
-    ripple_behavior: True
+    n_clases: 0
     orientation: "vertical"
-    theme_bg_color: "Custom"
-    md_bg_color: 1, 1, 1, 1
-    style: "elevated"
+    size_hint: None, None
+    size: dp(158), dp(138)
+    padding: dp(14)
+    spacing: dp(2)
     on_release: app.abrir_categoria(self.categoria_id, self.nombre)
 
-    MDIcon:
-        icon: root.icono
-        theme_text_color: "Custom"
-        text_color: 0.09, 0.16, 0.55, 1
-        font_size: "26sp"
+    # Ficha circular con el ícono. AnchorLayout interno = centrado real
+    # (los BoxLayout ignoran pos_hint en el eje principal).
+    AnchorLayout:
+        size_hint: None, None
+        size: dp(46), dp(46)
+        canvas.before:
+            Color:
+                rgba: T.MIST
+            Ellipse:
+                pos: self.pos
+                size: self.size
+
+        MDIcon:
+            icon: root.icono
+            size_hint: None, None
+            size: dp(26), dp(26)
+            halign: "center"
+            valign: "middle"
+            theme_text_color: "Custom"
+            text_color: T.PRIMARY
+            font_size: "24sp"
 
     Widget:
-        size_hint_y: None
-        height: dp(8)
 
-    MDLabel:
+    TextoTitulo:
         text: root.nombre
-        bold: True
-        font_style: "Title"
-        role: "small"
         shorten: True
         shorten_from: "right"
+        size_hint_y: None
+        height: dp(22)
 
-    MDLabel:
-        text: root.grupo
-        theme_text_color: "Secondary"
-        font_style: "Body"
-        role: "small"
+    TextoSuave:
+        text: root.grupo + "  •  " + str(root.n_clases) + (" clase" if root.n_clases == 1 else " clases")
+        size_hint_y: None
+        height: dp(18)
 
-<HomeTab>:
-    name: "home_tab"
-    md_bg_color: 1, 1, 1, 1
+# Fila de "Clases recientes".
+<RecienteRow@TarjetaToque>:
+    grabacion_id: 0
+    titulo: ""
+    detalle: ""
+    icono: "book-outline"
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(68)
+    padding: dp(12), dp(10)
+    spacing: dp(12)
+    on_release: app.abrir_reproductor(self.grabacion_id)
+
+    AnchorLayout:
+        size_hint: None, None
+        size: dp(46), dp(46)
+        pos_hint: {"center_y": 0.5}
+        canvas.before:
+            Color:
+                rgba: T.PRIMARY
+            Ellipse:
+                pos: self.pos
+                size: self.size
+
+        MDIcon:
+            icon: "play"
+            size_hint: None, None
+            size: dp(26), dp(26)
+            halign: "center"
+            valign: "middle"
+            theme_text_color: "Custom"
+            text_color: 1, 1, 1, 1
+            font_size: "24sp"
 
     BoxLayout:
         orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(12)
 
-        MDLabel:
-            id: saludo
-            text: "¡Hola de nuevo!"
-            font_style: "Body"
-            role: "small"
-            theme_text_color: "Secondary"
+        TextoTitulo:
+            text: root.titulo
+            shorten: True
+            shorten_from: "right"
+
+        TextoSuave:
+            text: root.detalle
+            shorten: True
+            shorten_from: "right"
+
+<HomeTab>:
+    name: "home_tab"
+    md_bg_color: T.BG
+
+    BoxLayout:
+        orientation: "vertical"
+
+        # ---- Cabecera con degradado: saludo + iniciales del usuario ----
+        CabeceraDegradada:
+            id: header
+            orientation: "horizontal"
             size_hint_y: None
-            height: dp(18)
+            height: dp(124)
+            padding: dp(20), dp(14), dp(20), dp(30)
+            spacing: dp(12)
 
-        MDLabel:
-            id: nombre_usuario
-            text: ""
-            font_style: "Title"
-            role: "large"
-            bold: True
-            size_hint_y: None
-            height: dp(32)
-
-        MDCard:
-            theme_bg_color: "Custom"
-            md_bg_color: 0.09, 0.16, 0.55, 1
-            radius: [18, 18, 18, 18]
-            size_hint_y: None
-            height: dp(90)
-            padding: dp(16)
-            orientation: "vertical"
-            style: "filled"
-
-            MDLabel:
-                text: "Clases Recientes"
-                bold: True
-                theme_text_color: "Custom"
-                text_color: 1, 1, 1, 1
-                font_style: "Title"
-                role: "small"
-
-            MDLabel:
-                text: "Revisa las últimas grabaciones subidas por tus docentes."
-                theme_text_color: "Custom"
-                text_color: 1, 1, 1, 0.85
-                font_style: "Body"
-                role: "small"
-
-        ScrollView:
-            do_scroll_x: False
-            do_scroll_y: True
             BoxLayout:
-                id: categorias_container
                 orientation: "vertical"
-                spacing: dp(18)
-                size_hint_y: None
-                height: self.minimum_height
-                padding: 0, dp(4)
+                spacing: dp(2)
+
+                SubtituloCabecera:
+                    id: saludo
+                    text: "Hola"
+
+                TituloCabecera:
+                    id: nombre_usuario
+                    text: ""
+
+            AnchorLayout:
+                size_hint: None, None
+                size: dp(48), dp(48)
+                pos_hint: {"center_y": 0.5}
+                canvas.before:
+                    Color:
+                        rgba: 1, 1, 1, 0.20
+                    Ellipse:
+                        pos: self.pos
+                        size: self.size
+
+                MDLabel:
+                    id: iniciales
+                    text: ""
+                    halign: "center"
+                    valign: "middle"
+                    bold: True
+                    font_style: "Title"
+                    role: "medium"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 1
+
+        # ---- Contenido: hoja redondeada con categorías y recientes ----
+        Hoja:
+            orientation: "vertical"
+
+            ScrollView:
+                do_scroll_x: False
+                do_scroll_y: True
+                bar_width: 0
+
+                BoxLayout:
+                    id: categorias_container
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: dp(20), dp(20), dp(20), dp(24)

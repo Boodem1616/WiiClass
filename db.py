@@ -74,6 +74,12 @@ CREATE TABLE IF NOT EXISTS Descargas_offline (
     fecha_descarga TEXT,
     FOREIGN KEY (grabacion_id) REFERENCES Grabaciones(id)
 );
+
+-- Evita filas duplicadas si dos descargas de la misma clase se cruzan
+-- (antes solo lo prevenía un chequeo en Python, con una pequeña ventana
+-- de carrera entre "¿ya existe?" y "insertar").
+CREATE UNIQUE INDEX IF NOT EXISTS ux_descargas_grabacion
+    ON Descargas_offline(grabacion_id);
 """
 
 
@@ -196,11 +202,17 @@ def get_instituciones():
 
 
 def login(institucion_id: int, correo: str, password: str):
-    """Devuelve la fila del usuario si las credenciales son correctas, si no None."""
+    """Devuelve la fila del usuario si las credenciales son correctas, si no None.
+
+    El correo se compara sin distinguir mayúsculas: "SFlores@uct.cl" y
+    "sflores@uct.cl" son la misma cuenta (antes fallaba con "Credenciales
+    incorrectas" si el teclado del teléfono ponía la primera letra en
+    mayúscula).
+    """
     conn = get_connection()
     row = conn.execute(
         """SELECT * FROM Usuarios
-           WHERE correo = ? AND institucion_id = ? AND password_hash = ?""",
+           WHERE lower(correo) = lower(?) AND institucion_id = ? AND password_hash = ?""",
         (correo, institucion_id, _fake_hash(password)),
     ).fetchone()
     conn.close()
@@ -220,8 +232,34 @@ def get_usuario(usuario_id: int):
 
 
 def get_categorias():
+    """Categorías con la cantidad de clases de cada una (`n_clases`),
+    calculada en la misma consulta con un LEFT JOIN (así una categoría sin
+    grabaciones aparece igual, con 0)."""
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM Categorias ORDER BY nombre").fetchall()
+    rows = conn.execute(
+        """SELECT Categorias.*, COUNT(Grabaciones.id) AS n_clases
+           FROM Categorias
+           LEFT JOIN Grabaciones ON Grabaciones.categoria_id = Categorias.id
+           GROUP BY Categorias.id
+           ORDER BY Categorias.nombre"""
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def get_grabaciones_recientes(limite: int = 3):
+    """Las últimas grabaciones subidas (todas las categorías), para la
+    sección "Clases recientes" del Inicio."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT Grabaciones.*, Categorias.nombre AS categoria_nombre,
+                  Categorias.icono AS categoria_icono
+           FROM Grabaciones
+           JOIN Categorias ON Grabaciones.categoria_id = Categorias.id
+           ORDER BY Grabaciones.fecha_subida DESC, Grabaciones.id DESC
+           LIMIT ?""",
+        (limite,),
+    ).fetchall()
     conn.close()
     return rows
 
@@ -313,6 +351,15 @@ def marcar_notificacion_leida(notificacion_id: int):
     conn.close()
 
 
+def marcar_todas_leidas(usuario_id: int):
+    """Marca como leídas todas las notificaciones del usuario (se llama al
+    salir de la pestaña Alertas)."""
+    conn = get_connection()
+    conn.execute("UPDATE Notificaciones SET leida = 1 WHERE usuario_id = ?", (usuario_id,))
+    conn.commit()
+    conn.close()
+
+
 def crear_notificacion(usuario_id: int, mensaje: str, tipo: str):
     conn = get_connection()
     conn.execute(
@@ -356,6 +403,19 @@ def esta_descargada(grabacion_id: int) -> bool:
     return row is not None
 
 
+def get_ids_descargados() -> set:
+    """IDs de todas las grabaciones descargadas, en UNA sola consulta.
+
+    Antes, al armar la lista de una categoría se llamaba a `esta_descargada`
+    por cada clase (una conexión + consulta por fila, y se repetía en cada
+    refresco de la lista, p. ej. al seleccionar/deseleccionar).
+    """
+    conn = get_connection()
+    rows = conn.execute("SELECT grabacion_id FROM Descargas_offline").fetchall()
+    conn.close()
+    return {r["grabacion_id"] for r in rows}
+
+
 def get_ruta_local(grabacion_id: int):
     """Devuelve la ruta local si la grabación ya está descargada, o None.
     Se usa para preferir el archivo ya descargado al reproducir (funciona
@@ -373,17 +433,23 @@ def get_ruta_local(grabacion_id: int):
 def registrar_descarga(usuario_id: int, grabacion_id: int, ruta_local: str, peso_mb: float):
     """Registra una descarga como completada y genera la notificación
     correspondiente. Es idempotente: si ya estaba descargada, no duplica
-    la fila ni la notificación."""
-    if esta_descargada(grabacion_id):
-        return
+    la fila ni la notificación.
+
+    Usa `INSERT OR IGNORE` apoyado en el índice único de `grabacion_id`:
+    la propia base de datos decide de forma atómica si la fila es nueva
+    (`rowcount`), en vez de "consultar y luego insertar" en dos pasos.
+    """
     conn = get_connection()
-    conn.execute(
-        """INSERT INTO Descargas_offline (grabacion_id, ruta_local, peso_mb, fecha_descarga)
+    cur = conn.execute(
+        """INSERT OR IGNORE INTO Descargas_offline (grabacion_id, ruta_local, peso_mb, fecha_descarga)
            VALUES (?, ?, ?, datetime('now'))""",
         (grabacion_id, ruta_local, peso_mb),
     )
+    es_nueva = cur.rowcount > 0
     conn.commit()
     conn.close()
+    if not es_nueva:
+        return
     grab = get_grabacion(grabacion_id)
     if grab:
         crear_notificacion(

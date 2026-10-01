@@ -1,4 +1,7 @@
-<DownloadRow@MDCard>:
+#:import T theme
+
+# Fila de una clase descargada.
+<DownloadRow@TarjetaToque>:
     grabacion_id: 0
     ruta_local: ""
     titulo: ""
@@ -6,64 +9,81 @@
     peso_txt: ""
     orientation: "horizontal"
     size_hint_y: None
-    height: dp(64)
-    padding: dp(10)
+    height: dp(68)
+    padding: dp(12), dp(10)
     spacing: dp(12)
-    radius: [14, 14, 14, 14]
-    theme_bg_color: "Custom"
-    md_bg_color: 1, 1, 1, 1
-    style: "elevated"
-    ripple_behavior: True
     on_release: app.abrir_reproductor(self.grabacion_id, self.ruta_local)
 
-    MDIcon:
-        icon: "play-circle"
-        theme_text_color: "Custom"
-        text_color: 0.09, 0.16, 0.55, 1
-        font_size: "30sp"
+    AnchorLayout:
+        size_hint: None, None
+        size: dp(46), dp(46)
+        pos_hint: {"center_y": 0.5}
+        canvas.before:
+            Color:
+                rgba: T.PRIMARY
+            Ellipse:
+                pos: self.pos
+                size: self.size
+
+        MDIcon:
+            icon: "play"
+            size_hint: None, None
+            size: dp(26), dp(26)
+            halign: "center"
+            valign: "middle"
+            theme_text_color: "Custom"
+            text_color: 1, 1, 1, 1
+            font_size: "24sp"
 
     BoxLayout:
         orientation: "vertical"
-        MDLabel:
-            text: root.titulo
-            bold: True
-            font_style: "Title"
-            role: "small"
 
-        MDLabel:
-            text: root.fecha + "   •   " + root.peso_txt
-            theme_text_color: "Secondary"
-            font_style: "Body"
-            role: "small"
+        TextoTitulo:
+            text: root.titulo
+            shorten: True
+            shorten_from: "right"
+
+        TextoSuave:
+            text: root.fecha + "   •   " + root.peso_txt if root.peso_txt else root.fecha
 
     MDIcon:
         icon: "check-circle"
+        size_hint_x: None
+        width: dp(28)
         theme_text_color: "Custom"
-        text_color: 0.2, 0.7, 0.3, 1
+        text_color: T.SUCCESS
 
 <DownloadsTab>:
     name: "downloads_tab"
-    md_bg_color: 1, 1, 1, 1
+    md_bg_color: T.BG
 
     BoxLayout:
         orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(12)
 
-        MDLabel:
-            text: "Descargas"
-            bold: True
-            font_style: "Headline"
-            role: "small"
-            theme_text_color: "Custom"
-            text_color: 0.09, 0.16, 0.55, 1
+        CabeceraDegradada:
+            orientation: "vertical"
             size_hint_y: None
-            height: dp(40)
+            height: dp(104)
+            padding: dp(20), dp(14), dp(20), dp(30)
+            spacing: dp(2)
 
-        ScrollView:
-            BoxLayout:
-                id: contenedor
-                orientation: "vertical"
-                spacing: dp(14)
-                size_hint_y: None
-                height: self.minimum_height
+            TituloCabecera:
+                text: "Descargas"
+
+            SubtituloCabecera:
+                text: "Clases disponibles sin conexión"
+
+        Hoja:
+            orientation: "vertical"
+
+            ScrollView:
+                do_scroll_x: False
+                bar_width: 0
+
+                BoxLayout:
+                    id: contenedor
+                    orientation: "vertical"
+                    spacing: dp(12)
+                    padding: dp(20), dp(20), dp(20), dp(24)
+                    size_hint_y: None
+                    height: self.minimum_height

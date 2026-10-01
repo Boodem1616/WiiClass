@@ -1,114 +1,111 @@
+#:import T theme
+
+# Renglón de datos del perfil: etiqueta pequeña arriba, valor abajo.
 <ProfileField@MDBoxLayout>:
     label: ""
     value: ""
     orientation: "vertical"
     size_hint_y: None
-    height: dp(56)
-    padding: dp(12), dp(6)
+    height: dp(60)
+    padding: dp(4), dp(6)
 
-    MDLabel:
+    TextoSuave:
         text: root.label
-        font_style: "Body"
-        role: "small"
-        theme_text_color: "Secondary"
         size_hint_y: None
-        height: dp(16)
+        height: dp(18)
 
-    MDLabel:
+    TextoTitulo:
         text: root.value
-        bold: True
-        theme_text_color: "Custom"
-        text_color: 0.09, 0.16, 0.55, 1
 
 <ProfileTab>:
     name: "profile_tab"
-    md_bg_color: 1, 1, 1, 1
+    md_bg_color: T.BG
 
     BoxLayout:
         orientation: "vertical"
-        padding: dp(24)
-        spacing: dp(16)
 
-        MDLabel:
-            text: "Mi Perfil"
-            bold: True
-            font_style: "Headline"
-            role: "small"
-            theme_text_color: "Custom"
-            text_color: 0.09, 0.16, 0.55, 1
+        # ---- Cabecera con avatar ----
+        CabeceraDegradada:
+            orientation: "vertical"
             size_hint_y: None
-            height: dp(40)
+            height: dp(214)
+            padding: dp(20), dp(16), dp(20), dp(34)
+            spacing: dp(6)
 
-        MDCard:
-            size_hint: None, None
-            size: dp(96), dp(96)
-            pos_hint: {"center_x": 0.5}
-            radius: [48, 48, 48, 48]
-            theme_bg_color: "Custom"
-            md_bg_color: 0.85, 0.9, 1, 1
-            style: "filled"
+            # Avatar circular. Se dibuja con Ellipse: el `radius: [48, ...]`
+            # que tenía antes estaba en píxeles, no en dp, y en un teléfono
+            # de pantalla densa (2-3x) el círculo salía como cuadrado
+            # apenas redondeado.
+            AnchorLayout:
+                size_hint: None, None
+                size: dp(88), dp(88)
+                pos_hint: {"center_x": 0.5}
+                canvas.before:
+                    Color:
+                        rgba: 1, 1, 1, 1
+                    Ellipse:
+                        pos: self.pos
+                        size: self.size
 
-            MDLabel:
-                id: iniciales
+                MDLabel:
+                    id: iniciales
+                    text: ""
+                    halign: "center"
+                    valign: "middle"
+                    text_size: self.size
+                    bold: True
+                    font_style: "Headline"
+                    role: "medium"
+                    theme_text_color: "Custom"
+                    text_color: T.PRIMARY
+
+            TituloCabecera:
+                id: nombre_lbl
                 text: ""
                 halign: "center"
-                valign: "center"
-                bold: True
-                font_style: "Headline"
-                role: "small"
-                theme_text_color: "Custom"
-                text_color: 0.09, 0.16, 0.55, 1
 
-        MDLabel:
-            id: nombre_lbl
-            text: ""
-            halign: "center"
-            bold: True
-            font_style: "Title"
-            role: "medium"
-            size_hint_y: None
-            height: dp(30)
+            SubtituloCabecera:
+                id: rol_lbl
+                text: "Estudiante de Pregrado"
+                halign: "center"
 
-        MDLabel:
-            id: rol_lbl
-            text: "Estudiante de Pregrado"
-            halign: "center"
-            theme_text_color: "Secondary"
-            font_style: "Body"
-            role: "small"
-            size_hint_y: None
-            height: dp(20)
-
-        MDCard:
+        Hoja:
             orientation: "vertical"
-            radius: [18, 18, 18, 18]
-            padding: dp(8)
-            size_hint_y: None
-            height: dp(190)
-            theme_bg_color: "Custom"
-            md_bg_color: 1, 1, 1, 1
-            style: "elevated"
+            padding: dp(20), dp(20), dp(20), dp(20)
+            spacing: dp(16)
 
-            ProfileField:
-                id: campo_nombre
-                label: "NOMBRE COMPLETO"
+            Tarjeta:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(212)
+                padding: dp(12)
 
-            ProfileField:
-                id: campo_fecha
-                label: "FECHA DE NACIMIENTO"
+                ProfileField:
+                    id: campo_nombre
+                    label: "Nombre completo"
 
-            ProfileField:
-                id: campo_institucion
-                label: "ESTABLECIMIENTO UNIVERSITARIO"
+                ProfileField:
+                    id: campo_fecha
+                    label: "Fecha de nacimiento"
 
-        Widget:
+                ProfileField:
+                    id: campo_institucion
+                    label: "Institución"
 
-        MDButton:
-            style: "outlined"
-            pos_hint: {"center_x": 0.5}
-            line_color: 0.8, 0.15, 0.15, 1
-            on_release: app.cerrar_sesion()
+            Widget:
 
-            MDButtonText:
-                text: "Cerrar Sesión"
-                text_color: 0.8, 0.15, 0.15, 1
+            MDButton:
+                style: "outlined"
+                pos_hint: {"center_x": 0.5}
+                line_color: T.DANGER
+                on_release: app.cerrar_sesion()
+
+                MDButtonIcon:
+                    icon: "logout"
+                    theme_icon_color: "Custom"
+                    icon_color: T.DANGER
+
+                MDButtonText:
+                    text: "Cerrar sesión"
+                    theme_text_color: "Custom"
+                    text_color: T.DANGER

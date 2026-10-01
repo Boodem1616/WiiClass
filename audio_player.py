@@ -163,7 +163,13 @@ class AudioEngine(EventDispatcher):
                         time.sleep(0.05)
                     player.seek(start_at, relative=False)
             except Exception as exc:
-                Clock.schedule_once(lambda dt: self._on_player_error(my_token, exc))
+                # OJO: Python 3 BORRA la variable de `except ... as exc` al
+                # salir del bloque. La lambda corre después (hilo principal),
+                # y ahí `exc` ya no existía -> NameError, y `is_loading`
+                # quedaba en True para siempre (botón en "cargando", sin
+                # respuesta). Se copia a `error` antes de agendar.
+                error = exc
+                Clock.schedule_once(lambda dt: self._on_player_error(my_token, error))
                 return
             Clock.schedule_once(
                 lambda dt: self._on_player_ready(my_token, player, resume_playing)
@@ -212,6 +218,10 @@ class AudioEngine(EventDispatcher):
     def play(self):
         if self.is_loading:
             return
+        # Si la clase ya terminó, "play" la reproduce desde el inicio (sin
+        # esto, tocar play al final no hacía nada visible).
+        if self.duration and self.position >= self.duration - 0.35:
+            self.seek(0.0)
         if FFPYPLAYER_AVAILABLE and self._player:
             self._player.set_pause(False)
             self.is_playing = True
@@ -238,6 +248,10 @@ class AudioEngine(EventDispatcher):
         elif self._sound:
             self._sound.seek(seconds)
         self.position = seconds
+
+    def seek_relativo(self, delta: float):
+        """Adelanta o retrocede `delta` segundos (botones ±10 s)."""
+        self.seek(self.position + delta)
 
     def restart(self):
         """Botón 'Saltar al inicio'."""
@@ -298,6 +312,13 @@ class AudioEngine(EventDispatcher):
             dur = metadata.get("duration") if metadata else None
             if dur:
                 self.duration = dur
+            # Fin de la pista: ffpyplayer se queda "reproduciendo" en
+            # silencio al terminar, así que el ícono seguía en "pausa".
+            # Se pausa a mano para que la UI refleje la realidad.
+            if self.is_playing and self.duration and self.position >= self.duration - 0.25:
+                self._player.set_pause(True)
+                self.position = self.duration
+                self.is_playing = False
         elif self._sound:
             self.position = self._sound.get_pos()
             if self.position >= (self.duration or 0) and self.duration:

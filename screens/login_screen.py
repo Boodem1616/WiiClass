@@ -35,25 +35,17 @@ from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.clock import Clock
 from kivy.properties import ObjectProperty
-from kivy.graphics import Color, Rectangle
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.menu import MDDropdownMenu
 
 import db
+import theme
+from screens.gradient_utils import aplicar_degradado
+from screens.widgets import mostrar_aviso
 
 MAX_NOTEBOOKS_CONCURRENTES = 3
 INTERVALO_SPAWN_SEG = 3.2
-
-# Colores del degradado de fondo (arriba -> abajo), tomados del mockup.
-COLOR_GRADIENTE_ARRIBA = (0.22, 0.34, 0.64)
-COLOR_GRADIENTE_ABAJO = (0.05, 0.09, 0.28)
-
-# Color "píldora" translúcida de los campos (blanco a baja opacidad sobre
-# el fondo azul, igual que en el mockup).
-COLOR_CAMPO = (1, 1, 1, 0.14)
-COLOR_TEXTO_CLARO = (0.85, 0.88, 0.97, 1)
-COLOR_TEXTO_LABEL = (0.75, 0.8, 0.95, 1)
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "login_screen.kv"))
 
@@ -61,62 +53,19 @@ Builder.load_file(os.path.join(os.path.dirname(__file__), "login_screen.kv"))
 class LoginScreen(MDScreen):
     institucion_seleccionada = ObjectProperty(None, allownone=True)
 
-    N_BANDAS_DEGRADADO = 28
-
-    def _construir_fondo_degradado(self):
-        """Pinta un degradado vertical con bandas de color apiladas.
-
-        Se hace "a mano" con instrucciones de canvas (en vez de una
-        textura) porque es más simple de depurar y no depende de que el
-        `blit_buffer` de la textura tenga el formato/orden exacto que
-        Kivy espera: cada banda es sencillamente un rectángulo de un color
-        interpolado, así que si algo se ve mal es evidente por qué.
-        """
-        # No usamos `self.canvas.before.clear()`: KivyMD ata instrucciones
-        # de Push/Pop de estado internamente (por `BackgroundColorBehavior`)
-        # y limpiarlo a mano rompe ese balance (crashea con
-        # "IndexError: list index out of range" al dibujar). En cambio,
-        # simplemente agregamos nuestras bandas AL FINAL del mismo grupo:
-        # al dibujarse después, quedan pintadas encima y tapan el fondo
-        # sólido por defecto sin tocar lo que KivyMD ya armó.
-        self._bandas = []
-        n = self.N_BANDAS_DEGRADADO
-        r1, g1, b1 = COLOR_GRADIENTE_ARRIBA
-        r2, g2, b2 = COLOR_GRADIENTE_ABAJO
-        with self.canvas.before:
-            for i in range(n):
-                t = i / (n - 1)
-                color = Color(
-                    r1 + (r2 - r1) * t,
-                    g1 + (g2 - g1) * t,
-                    b1 + (b2 - b1) * t,
-                    1,
-                )
-                rect = Rectangle(pos=(0, 0), size=(1, 1))
-                self._bandas.append(rect)
-        self.bind(size=self._actualizar_fondo_degradado, pos=self._actualizar_fondo_degradado)
-        self._actualizar_fondo_degradado()
-
-    def _actualizar_fondo_degradado(self, *args):
-        n = len(self._bandas)
-        if not n or self.height <= 0:
-            return
-        alto_banda = self.height / n
-        for i, rect in enumerate(self._bandas):
-            # i=0 debe quedar arriba de la pantalla (coordenadas Kivy: y
-            # crece hacia arriba, así que "arriba" = self.y + self.height).
-            y = self.y + self.height - (i + 1) * alto_banda
-            rect.pos = (self.x, y)
-            rect.size = (self.width, alto_banda + 1)  # +1 evita líneas finas entre bandas
-
     def on_kv_post(self, base_widget):
-        self._construir_fondo_degradado()
+        # Degradado de fondo compartido con el resto de la app (ver
+        # screens/gradient_utils.py) — antes esta pantalla tenía su propia
+        # copia "a mano" de exactamente el mismo cálculo de bandas.
+        aplicar_degradado(self, theme.LOGIN_TOP, theme.LOGIN_BOTTOM,
+                           direccion="vertical", n_bandas=28)
         self._instituciones = {row["nombre"]: row["id"] for row in db.get_instituciones()}
         self._institucion_id = None
         self._menu = None
         self._spawn_start_event = None
         self._spawn_interval_event = None
         self._notebooks_activos = 0
+        self._eventos_paso = []  # relojes de cada cuaderno en vuelo (para cancelarlos)
 
     def on_enter(self, *args):
         # La animación solo corre mientras el Login está realmente visible:
@@ -132,12 +81,22 @@ class LoginScreen(MDScreen):
         if self._spawn_interval_event:
             self._spawn_interval_event.cancel()
             self._spawn_interval_event = None
-        # Limpia los cuadernos que hayan quedado animándose a mitad de camino.
+        # Cancela el reloj de cada cuaderno en vuelo. Antes solo se quitaban
+        # los widgets, pero los Clock.schedule_interval seguían corriendo
+        # ("fantasmas") hasta llegar al techo, gastando CPU y descuadrando el
+        # contador si se volvía al Login (cerrar sesión) enseguida.
+        for evento in self._eventos_paso:
+            evento.cancel()
+        self._eventos_paso = []
         self.ids.notebook_layer.clear_widgets()
         self._notebooks_activos = 0
 
     # ---- Selector de institución ----------------------------------
     def abrir_menu_instituciones(self, caller):
+        # Si ya había un menú abierto, se cierra antes de crear otro (antes
+        # cada toque creaba un menú nuevo sin descartar el anterior).
+        if self._menu:
+            self._menu.dismiss()
         items = [
             {
                 "text": nombre,
@@ -161,10 +120,16 @@ class LoginScreen(MDScreen):
         campo.password = not campo.password
         self.ids.toggle_password.icon = "eye-off-outline" if campo.password else "eye-outline"
 
+    def olvide_contrasena(self):
+        # En esta maqueta no hay servidor que envíe correos de recuperación.
+        mostrar_aviso("Recuperación de contraseña: disponible con el servidor")
+
     # ---- Login ------------------------------------------------------
     def iniciar_sesion(self):
-        correo = self.ids.correo.text.strip()
-        password = self.ids.password.text.strip()
+        correo = self.ids.correo.text.strip().lower()
+        # La contraseña NO se recorta con .strip(): si tiene espacios al
+        # inicio/fin son parte de ella (antes se descartaban en silencio).
+        password = self.ids.password.text
 
         if not self._institucion_id:
             self._toast("Selecciona tu institución")
@@ -183,47 +148,16 @@ class LoginScreen(MDScreen):
 
     @staticmethod
     def _toast(mensaje: str):
-        """Muestra un aviso breve abajo de la pantalla.
+        """Aviso breve abajo de la pantalla.
 
-        NO usa `MDSnackbar`: en KivyMD 2.0, `MDSnackbar` hereda de
-        `RippleBehavior`, que al construirse crea un `Fbo` (framebuffer)
-        del tamaño que tenga el widget en ESE momento. Si todavía no tiene
-        un tamaño real asignado (0, 0) —algo que puede pasar según el
-        driver de GPU/OpenGL— la creación del framebuffer falla con
-        "FBO Initialization failed: Incomplete attachment" y crashea la
-        app. Por eso este aviso se arma con widgets simples (Label +
-        canvas propio), sin ripple ni Fbo, para que sea robusto en
-        cualquier equipo/driver.
+        Ahora delega en `screens.widgets.mostrar_aviso`, que se comparte con
+        otras pantallas. Sigue SIN usar `MDSnackbar`: en KivyMD 2.0 su
+        `RippleBehavior` crea un `Fbo` con el tamaño que tenga el widget en
+        ese instante, y con tamaño (0, 0) el framebuffer falla ("FBO
+        Initialization failed: Incomplete attachment") y crashea la app en
+        algunos drivers. Un Label con canvas propio no tiene ese riesgo.
         """
-        from kivy.app import App
-        from kivy.uix.label import Label
-        from kivy.graphics import Color, RoundedRectangle
-
-        app = App.get_running_app()
-        contenedor = app.sm.get_screen("login").ids.root_layout
-
-        lbl = Label(
-            text=mensaje,
-            color=(1, 1, 1, 1),
-            size_hint=(None, None),
-            padding=(dp(18), dp(10)),
-            pos_hint={"center_x": 0.5, "y": 0.06},
-        )
-        lbl.texture_update()
-        lbl.size = (lbl.texture_size[0] + dp(36), dp(42))
-
-        with lbl.canvas.before:
-            Color(0.12, 0.12, 0.16, 0.92)
-            rect = RoundedRectangle(pos=lbl.pos, size=lbl.size, radius=[dp(21)])
-
-        def _seguir_widget(*_args):
-            rect.pos = lbl.pos
-            rect.size = lbl.size
-
-        lbl.bind(pos=_seguir_widget, size=_seguir_widget)
-
-        contenedor.add_widget(lbl)
-        Clock.schedule_once(lambda dt: contenedor.remove_widget(lbl), 2.2)
+        mostrar_aviso(mensaje)
 
     # ---- Animación de fondo (cuadernos flotando) --------------------
     #
@@ -284,6 +218,9 @@ class LoginScreen(MDScreen):
             if lbl.y >= techo:
                 layer.remove_widget(lbl)
                 self._notebooks_activos = max(0, self._notebooks_activos - 1)
+                if evento in self._eventos_paso:
+                    self._eventos_paso.remove(evento)
                 return False  # cancela el schedule_interval
 
-        Clock.schedule_interval(_paso, 1.0 / self.PASOS_POR_SEGUNDO)
+        evento = Clock.schedule_interval(_paso, 1.0 / self.PASOS_POR_SEGUNDO)
+        self._eventos_paso.append(evento)

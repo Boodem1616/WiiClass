@@ -57,6 +57,8 @@ def descargar_grabacion(usuario_id: int, grabacion_id: int, on_completa=None, on
 
             os.makedirs(CARPETA_DESCARGAS, exist_ok=True)
             origen = _ruta_absoluta(grab["url_audio"])
+            if not os.path.exists(origen):
+                raise FileNotFoundError(f"No existe el audio: {origen}")
             nombre_archivo = f"{grabacion_id}_{os.path.basename(origen)}"
             destino = os.path.join(CARPETA_DESCARGAS, nombre_archivo)
 
@@ -65,8 +67,13 @@ def descargar_grabacion(usuario_id: int, grabacion_id: int, on_completa=None, on
 
             db.registrar_descarga(usuario_id, grabacion_id, destino, round(peso_mb, 2))
         except Exception as exc:
+            # OJO: en Python 3 la variable de `except ... as exc` se BORRA al
+            # terminar el bloque. La lambda se ejecuta después (en el hilo
+            # principal), y ahí `exc` ya no existe -> NameError. Por eso se
+            # copia a `error` (variable normal) antes de agendar.
+            error = exc
             if on_error:
-                Clock.schedule_once(lambda dt: on_error(grabacion_id, exc))
+                Clock.schedule_once(lambda dt: on_error(grabacion_id, error))
             return
         if on_completa:
             Clock.schedule_once(lambda dt: on_completa(grabacion_id))

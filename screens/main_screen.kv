@@ -1,6 +1,8 @@
+#:import T theme
+
 <MainScreen>:
     name: "main"
-    md_bg_color: 1, 1, 1, 1
+    md_bg_color: T.BG
 
     BoxLayout:
         orientation: "vertical"
@@ -10,5 +12,16 @@
 
         MDNavigationBar:
             id: bottom_nav
-            md_bg_color: 1, 1, 1, 1
+            # Sin `theme_bg_color: "Custom"` KivyMD ignoraba md_bg_color y
+            # pintaba la barra con su color de tema (el tono rosado/lavanda
+            # que se veía en las capturas).
+            theme_bg_color: "Custom"
+            md_bg_color: T.SURFACE
             on_switch_tabs: root.on_switch_tabs(*args)
+            # Línea fina superior que separa la barra del contenido.
+            canvas.after:
+                Color:
+                    rgba: T.OUTLINE
+                Rectangle:
+                    pos: self.x, self.top - dp(1)
+                    size: self.width, dp(1)

@@ -42,6 +42,17 @@ class NotificationsTab(MDScreen):
     def on_pre_enter(self, *args):
         self.refrescar()
 
+    def on_leave(self, *args):
+        """Al salir de la pestaña, las notificaciones se dan por leídas.
+        (`marcar_notificacion_leida` existía en db.py pero nadie la usaba,
+        así que el estilo "no leída" nunca cambiaba.) Se marcan al SALIR y
+        no al entrar, para que el usuario alcance a ver cuáles eran nuevas."""
+        from kivy.app import App
+
+        app = App.get_running_app()
+        if app.usuario:
+            db.marcar_todas_leidas(app.usuario["id"])
+
     def refrescar(self):
         from kivy.app import App
 

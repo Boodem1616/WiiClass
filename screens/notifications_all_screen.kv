@@ -1,44 +1,48 @@
+#:import T theme
+
 <NotificationsAllScreen>:
     name: "notifications_all"
-    md_bg_color: 1, 1, 1, 1
+    md_bg_color: T.BG
 
     BoxLayout:
         orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(8)
 
-        BoxLayout:
+        CabeceraDegradada:
             size_hint_y: None
-            height: dp(40)
+            height: dp(64)
+            padding: dp(8), 0, dp(8), 0
             spacing: dp(4)
 
-            MDIconButton:
+            BotonCabecera:
                 icon: "arrow-left"
-                theme_text_color: "Custom"
-                text_color: 0.09, 0.16, 0.55, 1
-                pos_hint: {"center_y": 0.5}
                 on_release: app.volver_de_todas_notificaciones()
 
             MDLabel:
-                text: "Notificaciones"
+                text: "Todas las notificaciones"
                 bold: True
-                font_style: "Headline"
-                role: "small"
+                font_style: "Title"
+                role: "large"
                 theme_text_color: "Custom"
-                text_color: 0.09, 0.16, 0.55, 1
+                text_color: 1, 1, 1, 1
+                halign: "left"
+                valign: "middle"
+                text_size: self.width, self.height
 
-            MDIconButton:
+            BotonCabecera:
                 icon: "delete-sweep-outline"
-                theme_text_color: "Custom"
-                text_color: 0.09, 0.16, 0.55, 1
-                pos_hint: {"center_y": 0.5}
                 on_release: root.confirmar_limpiar()
 
-        ScrollView:
-            do_scroll_x: False
-            BoxLayout:
-                id: lista
-                orientation: "vertical"
-                spacing: dp(10)
-                size_hint_y: None
-                height: self.minimum_height
+        Hoja:
+            orientation: "vertical"
+
+            ScrollView:
+                do_scroll_x: False
+                bar_width: 0
+
+                BoxLayout:
+                    id: lista
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(20), dp(20), dp(20), dp(20)
+                    size_hint_y: None
+                    height: self.minimum_height

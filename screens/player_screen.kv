@@ -1,51 +1,86 @@
-<SpeedButton@MDButton>:
+#:import T theme
+
+# Chip de velocidad (0.5x / 1.0x / 1.5x / 2.0x). Mismo estilo que los
+# chips de semana; aquí ocupa partes iguales del ancho de la fila.
+<SpeedButton@ButtonBehavior+AnchorLayout>:
     value: 1.0
     active: False
-    style: "filled" if root.active else "outlined"
-    theme_bg_color: "Custom"
-    md_bg_color: (0.09, 0.16, 0.55, 1) if root.active else (1, 1, 1, 1)
+    texto: "1.0x"
+    canvas.before:
+        Color:
+            rgba: T.PRIMARY if self.active else T.SURFACE
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(19)]
+        Color:
+            rgba: T.PRIMARY if self.active else T.OUTLINE
+        Line:
+            rounded_rectangle: self.x, self.y, self.width, self.height, dp(19)
+            width: dp(1)
 
-    MDButtonText:
-        id: speed_label
-        text: "1.0x"
-        text_color: (1, 1, 1, 1) if root.active else (0.1, 0.1, 0.1, 1)
+    MDLabel:
+        text: root.texto
+        halign: "center"
+        valign: "middle"
+        text_size: self.size
+        bold: True
+        font_style: "Label"
+        role: "large"
+        theme_text_color: "Custom"
+        text_color: (1, 1, 1, 1) if root.active else T.PRIMARY
 
 <PlayerScreen>:
     name: "player_screen"
-    md_bg_color: 0.96, 0.97, 1, 1
+    md_bg_color: T.BG
 
     BoxLayout:
         orientation: "vertical"
 
-        MDTopAppBar:
-            type: "small"
-            theme_bg_color: "Custom"
-            md_bg_color: 0.96, 0.97, 1, 1
+        # ---- Cabecera ----
+        CabeceraDegradada:
+            id: header
+            size_hint_y: None
+            height: dp(64)
+            padding: dp(8), 0, dp(8), 0
+            spacing: dp(4)
 
-            MDTopAppBarLeadingButtonContainer:
-                MDActionTopAppBarButton:
-                    icon: "arrow-left"
-                    on_release: app.volver_desde_reproductor()
+            BotonCabecera:
+                icon: "arrow-left"
+                on_release: app.volver_desde_reproductor()
 
-            MDTopAppBarTitle:
+            MDLabel:
                 text: "Reproduciendo"
-                text_color: 0.1, 0.1, 0.4, 1
+                bold: True
+                font_style: "Title"
+                role: "large"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                halign: "left"
+                valign: "middle"
+                text_size: self.width, self.height
 
-        BoxLayout:
+        Hoja:
             orientation: "vertical"
-            padding: dp(20), dp(6), dp(20), dp(16)
+            padding: dp(20), dp(20), dp(20), dp(16)
             spacing: dp(10)
 
-            MDCard:
+            # ---- Portada: ficha de categoría + onda + título ----
+            # Es el elemento protagonista de la pantalla; el resto es sobrio.
+            BoxLayout:
                 id: cover
-                size_hint_y: None
-                height: dp(220)
-                radius: [22, 22, 22, 22]
-                theme_bg_color: "Custom"
-                md_bg_color: 0.13, 0.32, 0.82, 1
-                padding: dp(16)
                 orientation: "vertical"
-                style: "filled"
+                size_hint_y: None
+                height: dp(250)
+                padding: dp(18)
+                spacing: dp(4)
+                canvas.before:
+                    Color:
+                        rgba: T.BLUE
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(26)]
 
                 AnchorLayout:
                     anchor_x: "left"
@@ -53,28 +88,42 @@
                     size_hint_y: None
                     height: dp(46)
 
-                    MDCard:
+                    AnchorLayout:
                         size_hint: None, None
                         size: dp(46), dp(46)
-                        radius: [dp(12)]
-                        theme_bg_color: "Custom"
-                        md_bg_color: 1, 1, 1, 0.25
-                        style: "filled"
+                        canvas.before:
+                            Color:
+                                rgba: 1, 1, 1, 0.22
+                            RoundedRectangle:
+                                pos: self.pos
+                                size: self.size
+                                radius: [dp(14)]
 
                         MDIcon:
                             id: icono_categoria
                             icon: "book-outline"
-                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                            size_hint: None, None
+                            size: dp(26), dp(26)
+                            halign: "center"
+                            valign: "middle"
                             theme_text_color: "Custom"
                             text_color: 1, 1, 1, 1
-                            font_size: "22sp"
+                            font_size: "24sp"
 
                 Widget:
+
+                # Forma de onda: las barras se iluminan según el progreso.
+                Waveform:
+                    id: onda
+                    size_hint_y: None
+                    height: dp(70)
 
                 MDLabel:
                     id: titulo_clase
                     text: ""
                     bold: True
+                    shorten: True
+                    shorten_from: "right"
                     theme_text_color: "Custom"
                     text_color: 1, 1, 1, 1
                     font_style: "Title"
@@ -86,81 +135,100 @@
                     id: subtitulo_clase
                     text: ""
                     theme_text_color: "Custom"
-                    text_color: 1, 1, 1, 0.85
+                    text_color: 1, 1, 1, 0.82
                     font_style: "Body"
-                    role: "small"
+                    role: "medium"
                     size_hint_y: None
                     height: dp(20)
 
+            # ---- Barra de progreso (para buscar dentro de la clase) ----
             MDSlider:
                 id: slider
                 min: 0
                 max: 100
                 value: 0
                 size_hint_y: None
-                height: dp(24)
-                track_active_color: 0.09, 0.16, 0.55, 1
-                track_inactive_color: 0.85, 0.86, 0.92, 1
+                height: dp(28)
+                track_active_color: T.PRIMARY
+                track_inactive_color: T.OUTLINE
+                on_touch_down: root.on_slider_press(*args)
                 on_touch_up: root.on_slider_release(*args)
 
                 MDSliderHandle:
                     theme_bg_color: "Custom"
-                    md_bg_color: 0.09, 0.16, 0.55, 1
+                    md_bg_color: T.PRIMARY
 
             BoxLayout:
                 size_hint_y: None
                 height: dp(20)
-                MDLabel:
+                padding: dp(4), 0
+
+                TextoSuave:
                     id: lbl_pos
                     text: "00:00"
-                    font_style: "Body"
-                    role: "small"
+
                 Widget:
-                MDLabel:
+
+                TextoSuave:
                     id: lbl_dur
                     text: "00:00"
-                    font_style: "Body"
-                    role: "small"
                     halign: "right"
 
+            # ---- Controles: anterior · -10s · PLAY · +10s · siguiente ----
             BoxLayout:
                 size_hint_y: None
-                height: dp(64)
-                spacing: dp(36)
-                padding: dp(16), 0
+                height: dp(72)
+                spacing: dp(6)
 
                 Widget:
 
-                MDIconButton:
+                BotonPlano:
                     icon: "skip-previous"
-                    font_size: "30sp"
-                    on_release: root.saltar_inicio()
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.saltar_anterior()
+
+                BotonPlano:
+                    icon: "rewind-10"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.retroceder_10()
 
                 MDIconButton:
                     id: btn_play
-                    icon: "play-circle"
-                    font_size: "56sp"
+                    icon: "play"
+                    style: "filled"
+                    theme_bg_color: "Custom"
+                    md_bg_color: T.PRIMARY
+                    theme_icon_color: "Custom"
+                    icon_color: 1, 1, 1, 1
                     theme_text_color: "Custom"
-                    text_color: 0.09, 0.16, 0.55, 1
+                    text_color: 1, 1, 1, 1
+                    theme_font_size: "Custom"
+                    font_size: "34sp"
+                    size_hint: None, None
+                    size: dp(68), dp(68)
+                    pos_hint: {"center_y": 0.5}
                     on_release: root.toggle_play()
 
-                MDIconButton:
+                BotonPlano:
+                    icon: "fast-forward-10"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.adelantar_10()
+
+                BotonPlano:
                     icon: "skip-next"
-                    font_size: "30sp"
+                    pos_hint: {"center_y": 0.5}
                     on_release: root.saltar_siguiente()
 
                 Widget:
 
+            # ---- Velocidad ----
             BoxLayout:
                 id: speed_row
                 size_hint_y: None
-                height: dp(44)
+                height: dp(40)
                 spacing: dp(10)
-                padding: dp(10), 0
+                padding: dp(4), 0
 
             Widget:
                 # Espaciador flexible: absorbe el espacio sobrante al FINAL
-                # de la columna. Sin esto, Kivy deja todo el espacio libre
-                # ARRIBA del primer hijo (la portada) en vez de abajo del
-                # último — empujando la portada hacia abajo en vez de
-                # dejarla pegada al app bar.
+                # de la columna, para que la portada quede pegada arriba.

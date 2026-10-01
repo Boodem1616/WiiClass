@@ -1,4 +1,5 @@
 #:import dp kivy.metrics.dp
+#:import T theme
 
 <PillField@BoxLayout>:
     orientation: "horizontal"
@@ -8,11 +9,30 @@
     spacing: dp(10)
     canvas.before:
         Color:
-            rgba: 1, 1, 1, 0.14
+            rgba: 1, 1, 1, 0.24
         RoundedRectangle:
             pos: self.pos
             size: self.size
             radius: [dp(14)]
+        Color:
+            rgba: 1, 1, 1, 0.4
+        Line:
+            rounded_rectangle: self.x, self.y, self.width, self.height, dp(14)
+            width: dp(1)
+
+<PillIcon@AnchorLayout>:
+    icon: "help"
+    size_hint_x: None
+    width: dp(24)
+    anchor_x: "center"
+    anchor_y: "center"
+
+    MDIcon:
+        icon: root.icon
+        theme_text_color: "Custom"
+        text_color: 0.92, 0.94, 1, 1
+        size_hint: None, None
+        size: dp(24), dp(24)
 
 <LoginScreen>:
     name: "login"
@@ -27,7 +47,11 @@
 
         BoxLayout:
             orientation: "vertical"
-            size_hint: 0.84, None
+            size_hint: None, None
+            # Ancho: 84% en pantallas angostas (celular), pero nunca más de
+            # 420dp — en una ventana de escritorio ancha se ve como una
+            # tarjeta centrada en vez de campos estirados de borde a borde.
+            width: min(root.width * 0.84, dp(420))
             height: self.minimum_height
             pos_hint: {"center_x": 0.5, "center_y": 0.5}
             spacing: dp(6)
@@ -35,23 +59,32 @@
             # ---- Logo ----
             AnchorLayout:
                 size_hint_y: None
-                height: dp(96)
+                height: dp(104)
                 anchor_x: "center"
 
                 MDCard:
                     size_hint: None, None
-                    size: dp(72), dp(72)
-                    radius: [dp(20)]
+                    size: dp(88), dp(88)
+                    radius: [dp(24)]
                     theme_bg_color: "Custom"
                     md_bg_color: 1, 1, 1, 1
                     style: "filled"
 
-                    MDIcon:
-                        icon: "microphone-outline"
-                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
-                        theme_text_color: "Custom"
-                        text_color: 0.09, 0.16, 0.55, 1
-                        font_size: "34sp"
+                    # MDCard es un BoxLayout: ignora pos_hint. Un AnchorLayout
+                    # interno garantiza el centrado real del ícono.
+                    AnchorLayout:
+                        anchor_x: "center"
+                        anchor_y: "center"
+
+                        MDIcon:
+                            icon: "microphone-outline"
+                            size_hint: None, None
+                            size: dp(64), dp(64)
+                            halign: "center"
+                            valign: "middle"
+                            theme_text_color: "Custom"
+                            text_color: T.PRIMARY
+                            font_size: "60sp"
 
             MDLabel:
                 text: "WiiClass"
@@ -96,14 +129,12 @@
                     id: institucion_label
                     text: root.institucion_seleccionada or "Selecciona tu institución"
                     theme_text_color: "Custom"
-                    text_color: 0.9, 0.92, 1, 1
+                    text_color: 0.92, 0.94, 1, 1
+                    valign: "middle"
+                    text_size: self.size
 
-                MDIcon:
+                PillIcon:
                     icon: "chevron-down"
-                    theme_text_color: "Custom"
-                    text_color: 0.85, 0.88, 0.97, 1
-                    size_hint_x: None
-                    width: dp(24)
 
             Widget:
                 size_hint_y: None
@@ -120,12 +151,8 @@
                 height: dp(20)
 
             PillField:
-                MDIcon:
+                PillIcon:
                     icon: "email-outline"
-                    theme_text_color: "Custom"
-                    text_color: 0.85, 0.88, 0.97, 1
-                    size_hint_x: None
-                    width: dp(24)
 
                 TextInput:
                     id: correo
@@ -137,8 +164,11 @@
                     background_normal: ""
                     background_active: ""
                     multiline: False
-                    padding: [0, dp(14), 0, 0]
+                    padding: [0, (self.height - self.line_height) / 2]
                     font_size: "15sp"
+                    # Enter en el correo salta a la contraseña.
+                    write_tab: False
+                    on_text_validate: password.focus = True
 
             Widget:
                 size_hint_y: None
@@ -155,12 +185,8 @@
                 height: dp(20)
 
             PillField:
-                MDIcon:
+                PillIcon:
                     icon: "lock-outline"
-                    theme_text_color: "Custom"
-                    text_color: 0.85, 0.88, 0.97, 1
-                    size_hint_x: None
-                    width: dp(24)
 
                 TextInput:
                     id: password
@@ -173,8 +199,10 @@
                     background_active: ""
                     multiline: False
                     password: True
-                    padding: [0, dp(14), 0, 0]
+                    padding: [0, (self.height - self.line_height) / 2]
                     font_size: "15sp"
+                    # Enter en la contraseña inicia sesión.
+                    on_text_validate: root.iniciar_sesion()
 
                 MDIconButton:
                     id: toggle_password
@@ -192,11 +220,13 @@
                 style: "filled"
                 theme_bg_color: "Custom"
                 md_bg_color: 1, 1, 1, 1
-                size_hint_x: 1
+                size_hint: None, None
                 theme_width: "Custom"
-                radius: [dp(16)]
+                # MDButton no respeta size_hint_x: 1; ancho explícito = ancho
+                # del formulario para que el fondo blanco cubra todo el texto.
+                width: self.parent.width if self.parent else dp(300)
                 height: dp(50)
-                size_hint_y: None
+                radius: [dp(16)]
                 pos_hint: {"center_x": 0.5}
                 on_release: root.iniciar_sesion()
 
@@ -204,19 +234,22 @@
                     text: "Iniciar Sesión"
                     bold: True
                     theme_text_color: "Custom"
-                    text_color: 0.09, 0.16, 0.55, 1
+                    text_color: T.PRIMARY
+                    size_hint_x: 1
                     halign: "center"
+                    valign: "middle"
+                    text_size: self.size
 
             Widget:
                 size_hint_y: None
                 height: dp(10)
 
-            MDLabel:
-                text: "¿Olvidaste tu contraseña?"
-                halign: "center"
-                theme_text_color: "Custom"
-                text_color: 0.75, 0.8, 0.95, 1
-                font_style: "Body"
-                role: "small"
-                size_hint_y: None
-                height: dp(24)
+            MDButton:
+                style: "text"
+                pos_hint: {"center_x": 0.5}
+                on_release: root.olvide_contrasena()
+
+                MDButtonText:
+                    text: "¿Olvidaste tu contraseña?"
+                    theme_text_color: "Custom"
+                    text_color: 0.85, 0.9, 1, 1

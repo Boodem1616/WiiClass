@@ -1,53 +1,66 @@
+#:import T theme
+
 <NotificationsTab>:
     name: "notifications_tab"
-    md_bg_color: 1, 1, 1, 1
+    md_bg_color: T.BG
 
     BoxLayout:
         orientation: "vertical"
-        padding: dp(16)
-        spacing: dp(8)
 
-        BoxLayout:
+        CabeceraDegradada:
             size_hint_y: None
-            height: dp(40)
+            height: dp(104)
+            padding: dp(20), dp(14), dp(8), dp(30)
+            spacing: dp(2)
 
-            MDLabel:
-                text: "Notificaciones"
-                bold: True
-                font_style: "Headline"
-                role: "small"
-                theme_text_color: "Custom"
-                text_color: 0.09, 0.16, 0.55, 1
+            BoxLayout:
+                orientation: "vertical"
 
-            MDIconButton:
+                TituloCabecera:
+                    text: "Notificaciones"
+
+                SubtituloCabecera:
+                    text: "Descargas y clases nuevas"
+
+            BotonCabecera:
                 icon: "delete-sweep-outline"
-                theme_text_color: "Custom"
-                text_color: 0.09, 0.16, 0.55, 1
-                pos_hint: {"center_y": 0.5}
                 on_release: root.confirmar_limpiar()
 
-        BoxLayout:
-            size_hint_y: None
-            height: dp(32) if root.mostrar_boton_todas else 0
-            opacity: 1 if root.mostrar_boton_todas else 0
-            disabled: not root.mostrar_boton_todas
+        Hoja:
+            orientation: "vertical"
+            padding: dp(20), dp(8), dp(20), 0
+            spacing: dp(6)
 
-            MDButton:
-                style: "text"
-                pos_hint: {"center_y": 0.5}
-                on_release: root.ir_a_todas()
-
-                MDButtonIcon:
-                    icon: "playlist-check"
-
-                MDButtonText:
-                    text: "Mostrar todas las notificaciones"
-
-        ScrollView:
-            do_scroll_x: False
+            # Aparece solo cuando hay 7 o más notificaciones.
             BoxLayout:
-                id: lista
-                orientation: "vertical"
-                spacing: dp(10)
                 size_hint_y: None
-                height: self.minimum_height
+                height: dp(40) if root.mostrar_boton_todas else 0
+                opacity: 1 if root.mostrar_boton_todas else 0
+                disabled: not root.mostrar_boton_todas
+
+                MDButton:
+                    style: "text"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.ir_a_todas()
+
+                    MDButtonIcon:
+                        icon: "playlist-check"
+                        theme_icon_color: "Custom"
+                        icon_color: T.PRIMARY
+
+                    MDButtonText:
+                        text: "Mostrar todas las notificaciones"
+                        theme_text_color: "Custom"
+                        text_color: T.PRIMARY
+
+            ScrollView:
+                do_scroll_x: False
+                bar_width: 0
+
+                BoxLayout:
+                    id: lista
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: 0, dp(8), 0, dp(20)
+                    size_hint_y: None
+                    height: self.minimum_height

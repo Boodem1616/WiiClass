@@ -49,7 +49,9 @@ from kivymd.uix.button import MDIconButton
 from kivymd.uix.screen import MDScreen
 
 import db
+import theme
 from downloads_manager import descargar_grabacion, descargar_varias
+from screens.widgets import mostrar_aviso
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "category_screen.kv"))
 
@@ -141,39 +143,41 @@ class ClaseRowSlot(FloatLayout):
     (un `BoxLayout`) no permite hacer directamente con sus propios hijos.
     """
 
-    def __init__(self, screen, grabacion, **kwargs):
+    def __init__(self, screen, grabacion, descargada: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.size_hint_x = 1
         self.size_hint_y = None
         self.height = ALTO_FILA
         self.grabacion_id = grabacion["id"]
 
-        mins = (grabacion["duracion_seg"] or 0) // 60
-        secs = (grabacion["duracion_seg"] or 0) % 60
-
+        # `descargada` llega precalculado por CategoryScreen (una sola
+        # consulta para toda la lista) en vez de consultar la BD por fila.
         self.row = ClaseRow(
             screen=screen,
             grabacion_id=grabacion["id"],
             titulo=grabacion["nombre"],
-            fecha=grabacion["fecha_subida"] or "",
-            duracion_txt=f"{mins}:{secs:02d}",
-            descargada=db.esta_descargada(grabacion["id"]),
+            fecha=theme.fmt_fecha(grabacion["fecha_subida"]),
+            duracion_txt=theme.fmt_duracion(grabacion["duracion_seg"]),
+            descargada=descargada,
             modo_seleccion=screen.modo_seleccion,
             seleccionada=grabacion["id"] in screen._seleccionadas,
             size_hint=(1, 1),
             pos=(0, 0),
         )
         self.add_widget(self.row)
+        # FloatLayout NO redimensiona a sus hijos solos: se sincroniza a mano
+        # cada vez que cambia el tamaño/posición del contenedor.
         self.bind(size=self._sincronizar_fila, pos=self._sincronizar_fila)
         self._sincronizar_fila()
 
         self.boton_descarga = MDIconButton(
-            icon="check-circle" if self.row.descargada else "download-outline",
+            icon="check-circle" if descargada else "download-outline",
             theme_text_color="Custom",
-            text_color=(0.2, 0.7, 0.3, 1) if self.row.descargada else (0.5, 0.55, 0.65, 1),
-            pos_hint={"right": 0.965, "y": 0.06},
+            text_color=theme.SUCCESS if descargada else theme.TEXT_SOFT,
+            # Centrado verticalmente en la tarjeta, pegado al borde derecho.
+            pos_hint={"right": 0.985, "center_y": 0.5},
             size_hint=(None, None),
-            disabled=self.row.descargada,
+            disabled=descargada,
         )
         self.boton_descarga.bind(on_release=lambda *_a: self.row.tocar_descarga())
         # El botón de descarga no debe abrir el reproductor ni activar la
@@ -192,15 +196,25 @@ class CategoryScreen(MDScreen):
     modo_seleccion = BooleanProperty(False)
     categoria_id = NumericProperty(0)
     num_seleccionadas = NumericProperty(0)
+    titulo_categoria = StringProperty("")  # se muestra en la cabecera
 
     def on_kv_post(self, base_widget):
         self._semana_actual = None  # None = pestaña "Todas"
         self._seleccionadas = set()
         self._week_buttons = {}
 
+    def atras(self):
+        """Botón de la esquina izquierda de la cabecera: en modo selección
+        cancela la selección; en modo normal vuelve al Inicio."""
+        from kivy.app import App
+        if self.modo_seleccion:
+            self.salir_de_seleccion()
+        else:
+            App.get_running_app().volver_a_inicio()
+
     def mostrar_categoria(self, categoria_id: int, nombre: str):
         self.categoria_id = categoria_id
-        self.ids.topbar_title.text = nombre
+        self.titulo_categoria = nombre
         self._semana_actual = None
         self.modo_seleccion = False
         self._seleccionadas = set()
@@ -219,7 +233,7 @@ class CategoryScreen(MDScreen):
         btn_todas = Factory.WeekTab()
         btn_todas.valor = None
         btn_todas.activo = True
-        btn_todas.ids.label.text = "Todas"
+        btn_todas.texto = "Todas"
         btn_todas.bind(on_release=lambda inst: self._filtrar_por_semana(None))
         contenedor.add_widget(btn_todas)
         self._week_buttons[None] = btn_todas
@@ -228,7 +242,7 @@ class CategoryScreen(MDScreen):
             btn = Factory.WeekTab()
             btn.valor = n
             btn.activo = False
-            btn.ids.label.text = f"Semana {n}"
+            btn.texto = f"Semana {n}"
             btn.bind(on_release=lambda inst, s=n: self._filtrar_por_semana(s))
             contenedor.add_widget(btn)
             self._week_buttons[n] = btn
@@ -245,8 +259,12 @@ class CategoryScreen(MDScreen):
         contenedor.clear_widgets()
 
         grabaciones = db.get_grabaciones_por_categoria(self.categoria_id, self._semana_actual)
+        descargadas = db.get_ids_descargados()  # una consulta para toda la lista
+        if not grabaciones:
+            contenedor.add_widget(Factory.TextoSuave(
+                text="No hay clases en esta semana.", size_hint_y=None, height=dp(28)))
         for g in grabaciones:
-            contenedor.add_widget(ClaseRowSlot(self, g))
+            contenedor.add_widget(ClaseRowSlot(self, g, descargada=g["id"] in descargadas))
 
     # ---- Selección múltiple (mantener presionado) ----------------------
     def activar_seleccion_multiple(self, grabacion_id_inicial: int):
@@ -285,6 +303,7 @@ class CategoryScreen(MDScreen):
             self._refrescar_lista()
 
         def _completas():
+            mostrar_aviso("Descarga terminada")
             self.salir_de_seleccion()
 
         descargar_varias(app.usuario["id"], ids, on_cada_una=_cada_una, on_todas_completas=_completas)
@@ -299,4 +318,10 @@ class CategoryScreen(MDScreen):
         def _completa(g_id):
             self._refrescar_lista()
 
-        descargar_grabacion(app.usuario["id"], grabacion_id, on_completa=_completa)
+        def _error(g_id, exc):
+            # Antes un error de descarga no se mostraba: el ícono se quedaba
+            # igual y el usuario no sabía si había fallado.
+            mostrar_aviso("No se pudo descargar la clase")
+
+        descargar_grabacion(app.usuario["id"], grabacion_id,
+                            on_completa=_completa, on_error=_error)

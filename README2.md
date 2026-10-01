@@ -32,6 +32,7 @@ buildozer -v android debug
 ```
 wiiclass_app/
 ├── main.py                 # Punto de entrada, navegación global
+├── theme.py                # Paleta de colores + formato de texto (fechas, duración) — ver nota abajo
 ├── db.py                   # Esquema SQLite + consultas
 ├── audio_player.py         # Motor de audio (play/pause/seek/velocidad)
 ├── downloads_manager.py    # Descarga de audio a almacenamiento local (offline)
@@ -39,6 +40,8 @@ wiiclass_app/
 ├── assets/audio/           # Archivos de audio de ejemplo (placeholders)
 ├── descargas/               # (se crea sola en tiempo de ejecución) audios descargados
 └── screens/
+    ├── common.kv                                                # Estilos compartidos (textos, botones) — ver nota abajo
+    ├── widgets.py           + gradient_utils.py                  # Widgets propios (degradado, waveform, aviso) — ver nota abajo
     ├── login_screen.py            + login_screen.kv            # Pantalla 1: Login
     ├── main_screen.py             + main_screen.kv              # Pantalla 2: Bottom Navigation (MDNavigationBar)
     ├── home_tab.py                + home_tab.kv                 # Tab Inicio: categorías (scroll horizontal)
@@ -61,6 +64,32 @@ lógica. Al editar solo el aspecto visual de una pantalla, el archivo a tocar
 es el `.kv`; los manejadores de eventos (`on_release: ...` etc.) siguen
 haciendo referencia a métodos de la clase Python (`root.mi_metodo()`,
 `app.mi_metodo()`), así que ambos archivos siguen conectados igual que antes.
+
+### ¿Por qué `theme.py` y `screens/widgets.py` son `.py` y no `.kv`?
+
+A primera vista podría parecer que rompen la regla ".kv = diseño, .py =
+lógica", así que vale la pena aclararlo:
+
+- **`theme.py`** no define NINGÚN widget ni layout — son solo constantes de
+  color (`PRIMARY = (0.09, 0.16, 0.55, 1)`, etc.) y funciones puras de
+  formato de texto (`fmt_fecha`, `fmt_duracion`). Es el equivalente a una
+  hoja de variables de diseño (como `:root { --color-primary: ... }` en
+  CSS): el diseño real sigue viviendo en los `.kv`, que solo *leen* estos
+  valores con `#:import T theme` (ver `screens/common.kv`). Tener la paleta
+  en un solo lugar evita que el mismo azul esté copiado a mano en 15
+  archivos `.kv` distintos.
+- **`screens/widgets.py`** (degradados, la "forma de onda" del reproductor,
+  el aviso tipo *toast*) SÍ dibuja directamente con instrucciones de
+  `canvas` en Python. Esto no es una elección de estilo: Kivy no tiene una
+  forma declarativa en `.kv` para pintar un degradado de color o una
+  animación cuadro a cuadro reactiva a datos (`progress` del audio) — hay
+  que usar `Color`/`Rectangle`/`RoundedRectangle` desde Python sí o sí. Es
+  el mismo motivo, documentado más abajo, por el que ya se había descartado
+  `MDCard`/`Stencil` para varios widgets: no es lógica de negocio, es la
+  única forma de lograr ese efecto visual en este framework.
+- Estos widgets se **usan** desde `.kv` como cualquier otro (`CabeceraDegradada:`,
+  `Waveform:`), con sus hijos y propiedades declarados ahí — solo el
+  mecanismo interno de dibujo vive en Python.
 
 ## Notas de implementación
 

@@ -15,9 +15,9 @@ from kivy.metrics import dp
 from kivy.factory import Factory
 
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.label import MDLabel
 
 import db
+import theme
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "downloads_tab.kv"))
 
@@ -32,27 +32,23 @@ class DownloadsTab(MDScreen):
 
         agrupado = db.get_descargas_agrupadas()
         if not agrupado:
-            contenedor.add_widget(
-                MDLabel(text="No tienes clases descargadas todavía.",
-                        theme_text_color="Secondary", size_hint_y=None, height=dp(30))
-            )
+            # Estado vacío: explica qué hacer, no solo que no hay nada.
+            contenedor.add_widget(Factory.TextoSuave(
+                text="Aún no tienes clases descargadas.\n"
+                     "Descárgalas con el WiFi del campus para escucharlas sin conexión.",
+                size_hint_y=None, height=dp(56)))
             return
 
         for (cat_id, cat_nombre, cat_icono), items in agrupado.items():
-            header = MDLabel(
-                text=f"  {cat_nombre}",
-                bold=True,
-                font_style="Title",
-                role="medium",
-                size_hint_y=None,
-                height=dp(28),
-            )
-            contenedor.add_widget(header)
+            # Título de la categoría con la cantidad de clases descargadas.
+            n = len(items)
+            contenedor.add_widget(Factory.TituloSeccion(
+                text=f"{cat_nombre}  ·  {n} {'clase' if n == 1 else 'clases'}"))
             for it in items:
                 row = Factory.DownloadRow()
                 row.grabacion_id = it["grabacion_id"]
                 row.ruta_local = it["ruta_local"]
                 row.titulo = it["grabacion_nombre"]
-                row.fecha = it["fecha_subida"] or ""
-                row.peso_txt = f"{it['peso_mb']:.0f} MB" if it["peso_mb"] else ""
+                row.fecha = theme.fmt_fecha(it["fecha_subida"])
+                row.peso_txt = theme.fmt_peso(it["peso_mb"])
                 contenedor.add_widget(row)
