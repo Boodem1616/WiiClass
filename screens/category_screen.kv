@@ -8,7 +8,7 @@
     activo: False
     texto: "Todas"
     size_hint: None, None
-    size: label.texture_size[0] + dp(32), dp(36)
+    size: max(label.texture_size[0] + dp(32), dp(48)), dp(36)
     canvas.before:
         Color:
             rgba: T.PRIMARY if self.activo else T.SURFACE
@@ -27,6 +27,9 @@
         text: root.texto
         size_hint: None, None
         size: self.texture_size
+        # Sin límite de ancho: evita que el texto se parta letra por letra
+        # (antes text_size seguía al ancho del label, que arrancaba en ~0).
+        text_size: None, None
         halign: "center"
         bold: True
         font_style: "Label"

@@ -242,7 +242,7 @@ class CategoryScreen(MDScreen):
             btn = Factory.WeekTab()
             btn.valor = n
             btn.activo = False
-            btn.texto = f"Semana {n}"
+            btn.texto = f"S{n}"
             btn.bind(on_release=lambda inst, s=n: self._filtrar_por_semana(s))
             contenedor.add_widget(btn)
             self._week_buttons[n] = btn
