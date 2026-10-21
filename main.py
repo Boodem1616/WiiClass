@@ -3,7 +3,9 @@ main.py — WiiClass
 App Android de grabaciones de clases (Kivy + KivyMD 2.0 + SQLite).
 
 Flujo:
-  LoginScreen -> MainScreen (Inicio / [Descargas si offline] / Alertas / Perfil)
+  LoginScreen -> MainScreen (la barra depende del rol; ver screens/main_screen.py)
+    Estudiante: Inicio / [Descargas si offline] / Alertas / Perfil
+    Profesor:   Inicio / [Descargas si online] / Grabación / Alertas / Perfil
   HomeTab -> CategoryScreen -> PlayerScreen
   DownloadsTab -> PlayerScreen (mismo reproductor, archivo local)
 """
@@ -30,7 +32,7 @@ from kivymd.uix.screenmanager import MDScreenManager
 import db
 import theme
 from screens.login_screen import LoginScreen
-from screens.main_screen import MainScreen
+from screens.main_screen import MainScreen, tabs_para_rol
 from screens.category_screen import CategoryScreen
 from screens.player_screen import PlayerScreen
 from screens.notifications_all_screen import NotificationsAllScreen
@@ -63,6 +65,14 @@ class WiiClassApp(MDApp):
     # True cuando el chequeo de conectividad detecta que no hay red. Lo lee
     # el reproductor para no saltar a clases que no están descargadas.
     offline = False
+
+    @property
+    def rol(self) -> str:
+        return self.usuario["rol"] if self.usuario else "Estudiante"
+
+    @property
+    def es_profesor(self) -> bool:
+        return self.rol == "Profesor"
 
     def build(self):
         # "Blue" en vez de "Indigo": Indigo genera tonos lavanda/rosados en
@@ -111,7 +121,7 @@ class WiiClassApp(MDApp):
         # tab "Descargas" apenas el chequeo real termine, en segundo
         # plano — mismo patrón que `downloads_manager.py`.
         self.offline = False
-        main_screen.build_tabs(offline=False)
+        main_screen.build_tabs(offline=False, rol=self.rol)
         self.sm.transition.direction = "left"
         self.sm.current = "main"
 
@@ -132,18 +142,24 @@ class WiiClassApp(MDApp):
 
     def _aplicar_conectividad(self, offline: bool):
         main_screen = self.sm.get_screen("main")
-        offline_actual = "downloads_tab" in getattr(main_screen, "_tab_screens", {})
-        if offline_actual == offline:
+        # Solo se reconstruye la barra si el conjunto de pestañas cambia
+        # (depende del rol: p. ej. Descargas aparece offline para el
+        # estudiante y online para el profesor).
+        esperadas = {n for n, _t, _i in tabs_para_rol(self.rol, offline)}
+        if esperadas == main_screen.nombres_tabs():
+            self.offline = offline
             return  # sin cambios
         self.offline = offline
         # `refrescar=True`: la pantalla ya está visible, así que hay que
         # cargar los datos de la pestaña a mano. Además build_tabs conserva
         # la pestaña actual (antes te devolvía siempre a "Inicio" cada vez
         # que la red aparecía o desaparecía).
-        main_screen.build_tabs(offline=offline, refrescar=True)
+        main_screen.build_tabs(offline=offline, refrescar=True, rol=self.rol)
 
     def cerrar_sesion(self):
         Clock.unschedule(self._chequear_conectividad)
+        # Si el profesor estaba grabando, se guarda antes de salir.
+        self.sm.get_screen("main").reiniciar_sesion()
         self.usuario = None
         # Una sesión nueva empieza con las notificaciones sin ocultar
         # (ver notifications_state.py: el ocultamiento es solo por sesión).

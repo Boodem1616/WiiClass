@@ -1,0 +1,229 @@
+#:import T theme
+
+# Campo desplegable (Materia / Semana): ícono + texto + flecha. Dibujado a
+# mano en canvas, sin ripple (misma razón que el resto de la app).
+<SelectorField@ButtonBehavior+BoxLayout>:
+    icono: "book-outline"
+    texto: ""
+    placeholder: ""
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(52)
+    padding: dp(14), 0
+    spacing: dp(12)
+    opacity: 0.55 if self.disabled else 1
+    canvas.before:
+        Color:
+            rgba: T.OUTLINE
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+        Color:
+            rgba: T.MIST if self.state == "down" else T.SURFACE
+        RoundedRectangle:
+            pos: self.x + dp(1), self.y + dp(1)
+            size: self.width - dp(2), self.height - dp(2)
+            radius: [dp(13)]
+
+    MDIcon:
+        icon: root.icono
+        size_hint: None, None
+        size: dp(24), dp(24)
+        pos_hint: {"center_y": 0.5}
+        theme_text_color: "Custom"
+        text_color: T.PRIMARY
+
+    MDLabel:
+        text: root.texto or root.placeholder
+        valign: "middle"
+        text_size: self.size
+        font_style: "Body"
+        role: "large"
+        theme_text_color: "Custom"
+        text_color: T.TEXT if root.texto else T.TEXT_SOFT
+
+    MDIcon:
+        icon: "chevron-down"
+        size_hint: None, None
+        size: dp(24), dp(24)
+        pos_hint: {"center_y": 0.5}
+        theme_text_color: "Custom"
+        text_color: T.TEXT_SOFT
+
+# Botón grande Grabar / Detener.
+<BotonGrabar@ButtonBehavior+BoxLayout>:
+    grabando: False
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(52)
+    spacing: dp(8)
+    padding: dp(12), 0
+    opacity: 0.85 if self.state == "down" else 1
+    canvas.before:
+        Color:
+            rgba: T.DANGER if self.grabando else T.PRIMARY
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [dp(14)]
+
+    Widget:
+    MDIcon:
+        icon: "stop" if root.grabando else "microphone-outline"
+        size_hint: None, None
+        size: dp(24), dp(24)
+        pos_hint: {"center_y": 0.5}
+        theme_text_color: "Custom"
+        text_color: 1, 1, 1, 1
+    MDLabel:
+        text: "Detener" if root.grabando else "Grabar"
+        bold: True
+        size_hint: None, None
+        size: self.texture_size
+        text_size: None, None
+        pos_hint: {"center_y": 0.5}
+        font_style: "Title"
+        role: "medium"
+        theme_text_color: "Custom"
+        text_color: 1, 1, 1, 1
+    Widget:
+
+<RecordingTab>:
+    md_bg_color: T.BG
+
+    ScrollView:
+        do_scroll_x: False
+        bar_width: 0
+
+        BoxLayout:
+            orientation: "vertical"
+            size_hint_y: None
+            height: self.minimum_height
+            padding: dp(20), dp(24), dp(20), dp(24)
+            spacing: dp(8)
+
+            MDLabel:
+                text: "Grabación"
+                bold: True
+                font_style: "Headline"
+                role: "small"
+                theme_text_color: "Custom"
+                text_color: T.PRIMARY
+                size_hint_y: None
+                height: dp(40)
+
+            TextoSuave:
+                text: "Selecciona tu materia y semana para organizar tu nueva grabación."
+                size_hint_y: None
+                height: dp(44)
+                text_size: self.width, None
+                valign: "top"
+
+            TituloSeccion:
+                text: "Materia"
+                height: dp(28)
+            SelectorField:
+                id: sel_materia
+                icono: "book-open-page-variant-outline"
+                texto: root.materia_texto
+                placeholder: "Selecciona la materia"
+                disabled: root.grabando
+                on_release: root.abrir_menu_materias(self)
+
+            Widget:
+                size_hint_y: None
+                height: dp(4)
+
+            TituloSeccion:
+                text: "Semana de la materia"
+                height: dp(28)
+            SelectorField:
+                id: sel_semana
+                icono: "calendar-month-outline"
+                texto: root.semana_texto
+                placeholder: "Selecciona la semana"
+                disabled: root.grabando
+                on_release: root.abrir_menu_semanas(self)
+
+            Widget:
+                size_hint_y: None
+                height: dp(4)
+
+            TituloSeccion:
+                text: "Título de la grabación"
+                height: dp(28)
+            BoxLayout:
+                size_hint_y: None
+                height: dp(52)
+                padding: dp(14), 0
+                opacity: 0.55 if root.grabando else 1
+                canvas.before:
+                    Color:
+                        rgba: T.OUTLINE
+                    RoundedRectangle:
+                        pos: self.pos
+                        size: self.size
+                        radius: [dp(14)]
+                    Color:
+                        rgba: T.SURFACE
+                    RoundedRectangle:
+                        pos: self.x + dp(1), self.y + dp(1)
+                        size: self.width - dp(2), self.height - dp(2)
+                        radius: [dp(13)]
+                TextInput:
+                    id: titulo
+                    hint_text: "Ej: Introducción a Matrices"
+                    hint_text_color: T.TEXT_SOFT
+                    foreground_color: T.TEXT
+                    cursor_color: T.PRIMARY
+                    background_color: 0, 0, 0, 0
+                    background_normal: ""
+                    background_active: ""
+                    multiline: False
+                    disabled: root.grabando
+                    padding: [0, (self.height - self.line_height) / 2]
+                    font_size: "15sp"
+
+            Widget:
+                size_hint_y: None
+                height: dp(10)
+
+            # ---- Tarjeta del cronómetro ----
+            Tarjeta:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(210)
+                padding: dp(20)
+                spacing: dp(6)
+
+                MDLabel:
+                    text: root.tiempo_txt
+                    halign: "center"
+                    bold: True
+                    font_style: "Display"
+                    role: "small"
+                    theme_text_color: "Custom"
+                    text_color: T.DANGER if root.grabando else T.PRIMARY
+                MDLabel:
+                    text: root.estado_txt
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(22)
+                    font_style: "Body"
+                    role: "medium"
+                    theme_text_color: "Custom"
+                    text_color: T.TEXT_SOFT
+                BotonGrabar:
+                    grabando: root.grabando
+                    on_release: root.alternar_grabacion()
+                MDLabel:
+                    text: "Pulsa Detener para guardar la clase." if root.grabando else "Pulsa Grabar para comenzar a registrar el audio de tu clase."
+                    halign: "center"
+                    size_hint_y: None
+                    height: dp(36)
+                    text_size: self.width, None
+                    font_style: "Body"
+                    role: "small"
+                    theme_text_color: "Custom"
+                    text_color: T.TEXT_SOFT

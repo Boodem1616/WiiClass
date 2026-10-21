@@ -1,3 +1,5 @@
 kivy>=2.3.0
 kivymd>=2.0.0
 ffpyplayer>=4.5.0
+# Grabación en escritorio (en Android se usa MediaRecorder vía pyjnius, sin dependencias extra)
+sounddevice>=0.4.6; platform_system != "Linux" or platform_machine != "aarch64"

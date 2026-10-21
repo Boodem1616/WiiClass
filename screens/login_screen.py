@@ -34,7 +34,7 @@ import os
 from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.clock import Clock
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, StringProperty
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.menu import MDDropdownMenu
@@ -52,6 +52,7 @@ Builder.load_file(os.path.join(os.path.dirname(__file__), "login_screen.kv"))
 
 class LoginScreen(MDScreen):
     institucion_seleccionada = ObjectProperty(None, allownone=True)
+    rol_seleccionado = StringProperty("Estudiante")
 
     def on_kv_post(self, base_widget):
         # Degradado de fondo compartido con el resto de la app (ver
@@ -114,6 +115,22 @@ class LoginScreen(MDScreen):
         if self._menu:
             self._menu.dismiss()
 
+    # ---- Selector de rol ------------------------------------------
+    def abrir_menu_roles(self, caller):
+        if self._menu:
+            self._menu.dismiss()
+        items = [
+            {"text": rol, "on_release": lambda r=rol: self._elegir_rol(r)}
+            for rol in db.ROLES
+        ]
+        self._menu = MDDropdownMenu(caller=caller, items=items)
+        self._menu.open()
+
+    def _elegir_rol(self, rol):
+        self.rol_seleccionado = rol
+        if self._menu:
+            self._menu.dismiss()
+
     # ---- Mostrar/ocultar contraseña ------------------------------
     def toggle_password_visibility(self):
         campo = self.ids.password
@@ -138,7 +155,7 @@ class LoginScreen(MDScreen):
             self._toast("Completa correo y contraseña")
             return
 
-        usuario = db.login(self._institucion_id, correo, password)
+        usuario = db.login(self._institucion_id, correo, password, self.rol_seleccionado)
         if usuario is None:
             self._toast("Credenciales incorrectas")
             return

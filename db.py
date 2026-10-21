@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS Usuarios (
     fecha_nac TEXT,
     institucion_id INTEGER,
     foto_path TEXT,
+    rol TEXT NOT NULL DEFAULT 'Estudiante' CHECK(rol IN ('Estudiante', 'Profesor')),
     FOREIGN KEY (institucion_id) REFERENCES Instituciones(id)
 );
 
@@ -53,6 +54,17 @@ CREATE TABLE IF NOT EXISTS Grabaciones (
     fecha_subida TEXT,
     duracion_seg INTEGER,
     semana INTEGER,
+    profesor_id INTEGER,              -- NULL = grabación de ejemplo; si no, la subió ese profesor
+    FOREIGN KEY (categoria_id) REFERENCES Categorias(id),
+    FOREIGN KEY (profesor_id) REFERENCES Usuarios(id)
+);
+
+-- Materias (Categorias) asignadas a cada profesor.
+CREATE TABLE IF NOT EXISTS Profesor_Materia (
+    profesor_id INTEGER NOT NULL,
+    categoria_id INTEGER NOT NULL,
+    PRIMARY KEY (profesor_id, categoria_id),
+    FOREIGN KEY (profesor_id) REFERENCES Usuarios(id),
     FOREIGN KEY (categoria_id) REFERENCES Categorias(id)
 );
 
@@ -89,11 +101,14 @@ def init_db(seed: bool = True):
     conn.executescript(SCHEMA)
     conn.commit()
     _migrar_columna_semana(conn)
+    _migrar_roles(conn)
 
     cur = conn.execute("SELECT COUNT(*) AS c FROM Instituciones")
     if seed and cur.fetchone()["c"] == 0:
         _seed_demo_data(conn)
     cur.close()
+    if seed:
+        _seed_profesor_demo(conn)
     conn.close()
 
     # Se recalcula siempre (es determinístico e idempotente): así, si se
@@ -111,6 +126,43 @@ def _migrar_columna_semana(conn):
     if "semana" not in columnas:
         conn.execute("ALTER TABLE Grabaciones ADD COLUMN semana INTEGER")
         conn.commit()
+
+
+def _migrar_roles(conn):
+    """Migración liviana para bases creadas ANTES de existir los roles:
+    agrega `Usuarios.rol` (los usuarios existentes quedan como Estudiante)
+    y `Grabaciones.profesor_id`. Las tablas nuevas ya las crea SCHEMA."""
+    cols_u = [r["name"] for r in conn.execute("PRAGMA table_info(Usuarios)").fetchall()]
+    if "rol" not in cols_u:
+        conn.execute(
+            "ALTER TABLE Usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'Estudiante' "
+            "CHECK(rol IN ('Estudiante', 'Profesor'))"
+        )
+    cols_g = [r["name"] for r in conn.execute("PRAGMA table_info(Grabaciones)").fetchall()]
+    if "profesor_id" not in cols_g:
+        conn.execute("ALTER TABLE Grabaciones ADD COLUMN profesor_id INTEGER REFERENCES Usuarios(id)")
+    conn.commit()
+
+
+def _seed_profesor_demo(conn):
+    """Crea (una sola vez) un profesor de prueba con dos materias asignadas."""
+    if conn.execute("SELECT 1 FROM Usuarios WHERE correo = 'profesor@uct.cl'").fetchone():
+        return
+    inst = conn.execute("SELECT id FROM Instituciones ORDER BY id LIMIT 1").fetchone()
+    if inst is None:
+        return
+    cur = conn.execute(
+        """INSERT INTO Usuarios (nombre, correo, password_hash, fecha_nac, institucion_id, rol)
+           VALUES (?, ?, ?, ?, ?, 'Profesor')""",
+        ("Carolina Rojas", "profesor@uct.cl", _fake_hash("12345678"), "1985-03-22", inst["id"]),
+    )
+    prof_id = cur.lastrowid
+    for cat in conn.execute("SELECT id FROM Categorias ORDER BY id LIMIT 2").fetchall():
+        conn.execute(
+            "INSERT OR IGNORE INTO Profesor_Materia (profesor_id, categoria_id) VALUES (?, ?)",
+            (prof_id, cat["id"]),
+        )
+    conn.commit()
 
 
 def _seed_demo_data(conn):
@@ -201,7 +253,7 @@ def get_instituciones():
     return rows
 
 
-def login(institucion_id: int, correo: str, password: str):
+def login(institucion_id: int, correo: str, password: str, rol: str = "Estudiante"):
     """Devuelve la fila del usuario si las credenciales son correctas, si no None.
 
     El correo se compara sin distinguir mayúsculas: "SFlores@uct.cl" y
@@ -212,8 +264,9 @@ def login(institucion_id: int, correo: str, password: str):
     conn = get_connection()
     row = conn.execute(
         """SELECT * FROM Usuarios
-           WHERE lower(correo) = lower(?) AND institucion_id = ? AND password_hash = ?""",
-        (correo, institucion_id, _fake_hash(password)),
+           WHERE lower(correo) = lower(?) AND institucion_id = ? AND password_hash = ?
+             AND rol = ?""",
+        (correo, institucion_id, _fake_hash(password), rol),
     ).fetchone()
     conn.close()
     return row
@@ -312,6 +365,7 @@ def recalcular_semanas(dias_por_semana: int = 7):
         grabaciones = conn.execute(
             """SELECT id, fecha_subida FROM Grabaciones
                WHERE categoria_id = ? AND fecha_subida IS NOT NULL
+                 AND profesor_id IS NULL
                ORDER BY fecha_subida""",
             (cat["id"],),
         ).fetchall()
@@ -457,3 +511,59 @@ def registrar_descarga(usuario_id: int, grabacion_id: int, ruta_local: str, peso
             f"Audio descargado con éxito: {grab['nombre']}",
             "descarga_completada",
         )
+
+
+# ---------------------------------------------------------------------------
+# Roles y grabación (módulo del Profesor)
+# ---------------------------------------------------------------------------
+
+ROLES = ("Estudiante", "Profesor")
+
+
+def get_materias_profesor(profesor_id: int):
+    """Solo las materias (Categorias) ASIGNADAS a ese profesor."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT Categorias.* FROM Categorias
+           JOIN Profesor_Materia ON Profesor_Materia.categoria_id = Categorias.id
+           WHERE Profesor_Materia.profesor_id = ?
+           ORDER BY Categorias.nombre""",
+        (profesor_id,),
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def profesor_tiene_materia(profesor_id: int, categoria_id: int) -> bool:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM Profesor_Materia WHERE profesor_id = ? AND categoria_id = ?",
+        (profesor_id, categoria_id),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
+def registrar_grabacion_profesor(profesor_id: int, categoria_id: int, semana: int,
+                                 titulo: str, ruta_archivo: str, duracion_seg: int) -> int:
+    """Guarda la grabación hecha por un profesor y devuelve su id.
+
+    Mapeo con los campos pedidos: id_grabacion=id, id_materia=categoria_id,
+    id_profesor=profesor_id, semana, titulo=nombre, ruta_archivo=url_audio,
+    duracion=duracion_seg, fecha_creacion=fecha_subida. Se guarda en la
+    misma tabla `Grabaciones` que ya leen Inicio/Categoría/Reproductor, así
+    los estudiantes la ven sin cambios adicionales.
+    """
+    if not profesor_tiene_materia(profesor_id, categoria_id):
+        raise PermissionError("La materia no está asignada a este profesor")
+    conn = get_connection()
+    cur = conn.execute(
+        """INSERT INTO Grabaciones
+             (categoria_id, nombre, url_audio, fecha_subida, duracion_seg, semana, profesor_id)
+           VALUES (?, ?, ?, datetime('now', 'localtime'), ?, ?, ?)""",
+        (categoria_id, titulo, ruta_archivo, int(duracion_seg), int(semana), profesor_id),
+    )
+    conn.commit()
+    nuevo_id = cur.lastrowid
+    conn.close()
+    return nuevo_id

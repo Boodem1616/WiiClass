@@ -2,10 +2,10 @@
 main_screen.py — PANTALLA 2: PRINCIPAL (Post-Login)
 
 Bottom Navigation Bar con animación fluida al cambiar de tab.
-Orden estricto: 1. Inicio | 2. Notificaciones | 3. Perfil.
-[Condicional] Si el dispositivo está OFFLINE se añade un 4° tab oculto
-"Descargas" (solo visible offline), colocado justo después de Inicio para
-coincidir con el layout de los mocks.
+La barra depende del ROL (ver `tabs_para_rol`):
+  - Estudiante: Inicio | [Descargas, solo SIN conexión] | Alertas | Perfil
+  - Profesor:   Inicio | [Descargas, solo CON conexión] | Grabación | Alertas | Perfil
+    (el orden sigue el mock de Figma: Descargas va justo después de Inicio)
 
 En KivyMD 2.0.0 el antiguo MDBottomNavigation fue reemplazado por
 MDNavigationBar + MDScreenManager. Este screen sincroniza ambos widgets.
@@ -29,6 +29,25 @@ from kivymd.uix.navigationbar import (
 Builder.load_file(os.path.join(os.path.dirname(__file__), "main_screen.kv"))
 
 
+def tabs_para_rol(rol: str, offline: bool):
+    """Devuelve la lista de pestañas (nombre, texto, ícono) del rol.
+
+    Es una función pura (sin Kivy) para poder probarla por separado y
+    para que `main.py` pueda saber si la barra cambia al variar la red.
+    """
+    tabs = [("home_tab", "Inicio", "home")]
+    descargas = ("downloads_tab", "Descargas", "cloud-download-outline")
+    if rol == "Profesor":
+        if not offline:
+            tabs.append(descargas)
+        tabs.append(("recording_tab", "Grabación", "microphone-outline"))
+    elif offline:
+        tabs.append(descargas)
+    tabs.append(("notifications_tab", "Alertas", "bell-outline"))
+    tabs.append(("profile_tab", "Perfil", "account-outline"))
+    return tabs
+
+
 class MainScreen(MDScreen):
     """
     Nota de implementación: se usa un MDScreenManager interno
@@ -45,6 +64,10 @@ class MainScreen(MDScreen):
         self.ids.content_manager.transition = NoTransition()
         self._tab_screens = {}
         self._tab_actual = "home_tab"  # pestaña que el usuario está viendo
+        # La pestaña Grabación se crea UNA vez y se reutiliza: build_tabs se
+        # vuelve a ejecutar cuando cambia la red y, si recreara esta pestaña,
+        # se perdería una grabación en curso.
+        self._recording_tab = None
 
     def on_pre_enter(self, *args):
         # Al volver a esta pantalla (p. ej. desde el Reproductor o una
@@ -59,7 +82,15 @@ class MainScreen(MDScreen):
         if tab is not None and hasattr(tab, "refrescar"):
             tab.refrescar()
 
-    def build_tabs(self, offline: bool, refrescar: bool = False):
+    def reiniciar_sesion(self):
+        """Se llama al cerrar sesión: guarda una grabación en curso y suelta
+        la pestaña Grabación para que el próximo usuario empiece limpio."""
+        if self._recording_tab is not None:
+            self._recording_tab.finalizar_si_activa()
+            self._recording_tab = None
+        self._tab_actual = "home_tab"
+
+    def build_tabs(self, offline: bool, refrescar: bool = False, rol: str = "Estudiante"):
         """Construye la barra inferior y los tabs.
 
         `offline=True` agrega el tab "Descargas". Se vuelve a llamar cada
@@ -72,17 +103,20 @@ class MainScreen(MDScreen):
         from screens.notifications_tab import NotificationsTab
         from screens.profile_tab import ProfileTab
         from screens.downloads_tab import DownloadsTab
+        from screens.recording_tab import RecordingTab
 
         bottom_nav = self.ids.bottom_nav
         bottom_nav.clear_widgets()
         content_manager = self.ids.content_manager
         content_manager.clear_widgets()
 
-        tabs = [("home_tab", "Inicio", "home", HomeTab)]
-        if offline:
-            tabs.append(("downloads_tab", "Descargas", "cloud-download-outline", DownloadsTab))
-        tabs.append(("notifications_tab", "Alertas", "bell-outline", NotificationsTab))
-        tabs.append(("profile_tab", "Perfil", "account-outline", ProfileTab))
+        self._rol = rol
+        clases = {
+            "home_tab": HomeTab, "downloads_tab": DownloadsTab,
+            "recording_tab": RecordingTab, "notifications_tab": NotificationsTab,
+            "profile_tab": ProfileTab,
+        }
+        tabs = [(n, t, i, clases[n]) for n, t, i in tabs_para_rol(rol, offline)]
 
         # Si la pestaña que se estaba viendo ya no existe (p. ej. "Descargas"
         # al recuperar la red), se vuelve a "Inicio".
@@ -92,7 +126,12 @@ class MainScreen(MDScreen):
 
         self._tab_screens = {}
         for name, text, icon, screen_cls in tabs:
-            screen = screen_cls(name=name)
+            if name == "recording_tab":
+                if self._recording_tab is None:
+                    self._recording_tab = RecordingTab(name=name)
+                screen = self._recording_tab
+            else:
+                screen = screen_cls(name=name)
             content_manager.add_widget(screen)
             self._tab_screens[name] = screen
 
@@ -137,6 +176,9 @@ class MainScreen(MDScreen):
         if nombre_tab:
             self._tab_actual = nombre_tab
             self.ids.content_manager.current = nombre_tab
+
+    def nombres_tabs(self):
+        return set(self._tab_screens)
 
     def get_screen(self, nombre_tab):
         return self._tab_screens.get(nombre_tab)

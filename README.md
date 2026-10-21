@@ -103,3 +103,18 @@ este README y el documento de fundamentación UX/UI. El diseño de la
 app, las decisiones de arquitectura (Kivy+KivyMD, ScreenManager,
 separación .py/.kv) y la implementación original de cada pantalla son
 del equipo.
+
+
+## Roles y módulo de Grabación
+
+Al iniciar sesión se elige el **Rol** (Estudiante / Profesor); la barra inferior cambia según el rol:
+
+| Rol | Barra inferior |
+|---|---|
+| Estudiante | Inicio · Descargas (solo **sin** conexión) · Alertas · Perfil |
+| Profesor | Inicio · Descargas (solo **con** conexión) · **Grabación** · Alertas · Perfil |
+
+- Usuarios demo: `sflores@uct.cl` (Estudiante) y `profesor@uct.cl` (Profesor), ambos con contraseña `12345678`.
+- BD: `Usuarios.rol` (CHECK Estudiante/Profesor), tabla `Profesor_Materia` (materias asignadas) y `Grabaciones.profesor_id`. Las bases antiguas se migran solas al abrir la app.
+- Grabación: `recorder.py` usa `sounddevice` + `wave` (.wav) en escritorio y `MediaRecorder` por pyjnius (.m4a/AAC) en Android. Se guarda en `grabaciones/<materia>/semana_<N>/`.
+- Android (buildozer.spec): `android.permissions = RECORD_AUDIO` y `requirements = python3,kivy,kivymd,ffpyplayer,pyjnius`.

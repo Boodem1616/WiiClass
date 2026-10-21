@@ -140,7 +140,13 @@ class AudioEngine(EventDispatcher):
                 )
                 return
 
-            ff_opts = {"paused": True, "af": f"atempo={speed}"}
+            # `aresample` va ANTES de `atempo`: los .wav (p. ej. los que graba
+            # el modo escritorio con el módulo `wave`) no declaran su
+            # disposición de canales y, sin este paso, el FFmpeg de
+            # ffpyplayer falla con "Channel layout change is not supported"
+            # y el hilo de audio muere (no suena nada). Con mp3/m4a no hace
+            # falta, pero es inofensivo.
+            ff_opts = {"paused": True, "af": f"aresample=44100,atempo={speed}"}
             try:
                 player = MediaPlayer(source, ff_opts=ff_opts)
                 if start_at > 0:
