@@ -9,6 +9,9 @@ Controles:
   - Retroceder / adelantar 10 s (muy usado para repasar una explicación)
   - Siguiente clase de la misma categoría
   - Control de velocidad: botones fijos 0.5x / 1.0x / 1.5x / 2.0x
+    La barra y los tiempos se muestran en "tiempo a la velocidad actual":
+    a 2x una clase de 10:00 muestra 05:00 y la barra llega al final justo
+    cuando termina el audio (a 0.5x, 20:00).
 
 Compatible con KivyMD 2.0.0.
 """
@@ -189,20 +192,34 @@ class PlayerScreen(MDScreen):
         abajo antes de soltar, el salto se perdía y la perilla volvía atrás."""
         if self._arrastrando_slider:
             self._arrastrando_slider = False
-            audio_engine.seek(instance.value)
+            # El slider está en tiempo "a velocidad actual"; el motor trabaja
+            # con la posición del audio original.
+            audio_engine.seek(instance.value * self._factor_velocidad())
 
     # ---- UI loop -------------------------------------------------
+    @staticmethod
+    def _factor_velocidad():
+        """Velocidad actual (0.5, 1.0, 1.5, 2.0...). Dividir un tiempo del
+        audio original por este factor da cuánto tarda realmente en sonar."""
+        return audio_engine.speed or 1.0
+
     def _actualizar_ui(self, dt):
         if self.manager and self.manager.current != "player_screen":
             return
-        dur = audio_engine.duration or 0
-        pos = audio_engine.position or 0
+        vel = self._factor_velocidad()
+        # El motor entrega tiempos del audio ORIGINAL; la barra y las
+        # etiquetas se muestran en tiempo a la velocidad actual. Así a 2x un
+        # audio de 10:00 se ve de 05:00 y la barra llega al final cuando el
+        # audio realmente termina (antes se quedaba a la mitad).
+        dur = (audio_engine.duration or 0) / vel
+        pos = (audio_engine.position or 0) / vel
         self.ids.slider.max = max(dur, 1)
         if not self._arrastrando_slider:
             self.ids.slider.value = pos
         self.ids.lbl_pos.text = self._fmt(pos)
         self.ids.lbl_dur.text = self._fmt(dur)
-        # La onda decorativa avanza junto con la reproducción.
+        # La onda decorativa avanza junto con la reproducción (la fracción
+        # es la misma sin importar la velocidad).
         self.ids.onda.progress = (pos / dur) if dur else 0
 
     @staticmethod

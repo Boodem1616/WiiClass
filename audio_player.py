@@ -76,6 +76,16 @@ class AudioEngine(EventDispatcher):
         # ya se pidió algo más nuevo, se descarta comparando este id.
         self._load_token = 0
 
+        # --- Posición REAL dentro del audio (ver `_pts_a_posicion`) ---
+        # Con el filtro `atempo`, ffpyplayer reporta el reloj en la línea de
+        # tiempo de SALIDA (1 s por cada segundo real), no en la del archivo
+        # original. Para convertirlo hay que recordar desde dónde (en el
+        # audio original) arrancó el tramo actual y con qué velocidad se
+        # abrió el reproductor.
+        self._origen = 0.0                 # posición original en el último seek/apertura
+        self._t_origen = time.monotonic()  # cuándo ocurrió ese seek/apertura
+        self._vel_player = 1.0             # velocidad con la que se abrió el MediaPlayer
+
         # Cola + único hilo de trabajo persistente para TODAS las
         # operaciones nativas de audio (abrir y cerrar). Ver docstring del
         # módulo: esto es lo que evita el segmentation fault por dos hilos
@@ -125,6 +135,10 @@ class AudioEngine(EventDispatcher):
         my_token = self._load_token
         source = self.source
         speed = self.speed
+        # El nuevo reproductor arranca (y hace seek) en `start_at`: desde
+        # ahí su reloj avanza en tiempo de salida.
+        self._origen = start_at
+        self._t_origen = time.monotonic()
 
         def tarea():
             if old_player is not None:
@@ -178,23 +192,29 @@ class AudioEngine(EventDispatcher):
                 Clock.schedule_once(lambda dt: self._on_player_error(my_token, error))
                 return
             Clock.schedule_once(
-                lambda dt: self._on_player_ready(my_token, player, resume_playing)
+                lambda dt: self._on_player_ready(my_token, player, resume_playing, speed)
             )
 
         self._cola.put(tarea)
 
-    def _on_player_ready(self, token, player, resume_playing):
+    def _on_player_ready(self, token, player, resume_playing, speed=1.0):
         if token != self._load_token:
             # Llegó tarde: el usuario ya pidió otra cosa mientras tanto.
             # Cerrarlo también se encola, nunca en un hilo aparte.
             self._encolar_cierre(player)
             return
         self._player = player
+        self._vel_player = speed
         self.is_loading = False
         self._player.set_pause(not resume_playing)
         self.is_playing = resume_playing
         if self._clock_event is None:
             self._clock_event = Clock.schedule_interval(self._tick, 0.2)
+        # Si el usuario cambió de velocidad MIENTRAS este reproductor se
+        # abría (set_speed no hace nada durante la carga), el reproductor
+        # quedó con la velocidad vieja: se reabre ahora con la última pedida.
+        if abs(speed - self.speed) > 1e-6:
+            self.set_speed(self.speed)
 
     def _on_sound_ready(self, token, sound, start_at, resume_playing):
         if token != self._load_token:
@@ -251,6 +271,8 @@ class AudioEngine(EventDispatcher):
         seconds = max(0.0, min(seconds, self.duration or seconds))
         if FFPYPLAYER_AVAILABLE and self._player:
             self._player.seek(seconds, relative=False)
+            self._origen = seconds
+            self._t_origen = time.monotonic()
         elif self._sound:
             self._sound.seek(seconds)
         self.position = seconds
@@ -309,11 +331,37 @@ class AudioEngine(EventDispatcher):
         self._cola.put(tarea)
 
     # -- Loop interno ----------------------------------------------
+    def _pts_a_posicion(self, pts: float) -> float:
+        """Convierte el reloj de ffpyplayer a posición dentro del audio
+        ORIGINAL (la que usan la duración, el seek y la barra).
+
+        Con `atempo=V`, tras abrir o hacer seek en `origen`, el reloj vale
+        `origen + segundos_reales`, mientras que el audio original avanza
+        `V` segundos por cada segundo real. Por eso:
+
+            posicion = origen + V * (pts - origen)
+
+        (A 2x, tras 10 s reales el reloj marca +10 pero ya se oyeron 20 s
+        del archivo: sin esta conversión la barra se quedaba a la mitad.)
+
+        Justo después de un seek, `get_pts()` puede devolver todavía un
+        valor de la línea de tiempo anterior; se descarta si no encaja con
+        lo que puede haber transcurrido desde el seek.
+        """
+        transcurrido = time.monotonic() - self._t_origen
+        if pts < self._origen - 0.5 or pts > self._origen + transcurrido + 0.5:
+            return self.position
+        return self._origen + self._vel_player * (pts - self._origen)
+
     def _tick(self, dt):
         if FFPYPLAYER_AVAILABLE and self._player:
             pts = self._player.get_pts()
-            if pts is not None and pts >= 0:
-                self.position = pts
+            # Solo mientras suena: al terminar la pista (o en pausa) el reloj
+            # de ffpyplayer queda congelado unos ms ANTES del final y, si se
+            # copiara igual, pisaría la posición final y la barra no llegaría
+            # al 100 %.
+            if self.is_playing and pts is not None and pts >= 0:
+                self.position = self._pts_a_posicion(pts)
             metadata = self._player.get_metadata()
             dur = metadata.get("duration") if metadata else None
             if dur:
@@ -321,7 +369,10 @@ class AudioEngine(EventDispatcher):
             # Fin de la pista: ffpyplayer se queda "reproduciendo" en
             # silencio al terminar, así que el ícono seguía en "pausa".
             # Se pausa a mano para que la UI refleje la realidad.
-            if self.is_playing and self.duration and self.position >= self.duration - 0.25:
+            # El margen (0.25 s de reloj) se escala con la velocidad: a 2x
+            # equivale a 0.5 s del audio original.
+            margen = 0.25 * max(1.0, self._vel_player)
+            if self.is_playing and self.duration and self.position >= self.duration - margen:
                 self._player.set_pause(True)
                 self.position = self.duration
                 self.is_playing = False
