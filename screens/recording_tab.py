@@ -29,6 +29,7 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 
 import db
+from notification_service import notificaciones
 from recorder import RecorderError, crear_grabadora
 from screens.widgets import mostrar_aviso
 
@@ -214,7 +215,7 @@ class RecordingTab(MDScreen):
             return
 
         try:
-            db.registrar_grabacion_profesor(
+            grabacion_id = db.registrar_grabacion_profesor(
                 usuario["id"], self._materia_id, self._semana, titulo, ruta, duracion)
         except Exception as exc:
             # El audio ya está en disco; se conserva para no perder la clase.
@@ -225,6 +226,10 @@ class RecordingTab(MDScreen):
         self.ids.titulo.text = ""
         self._reiniciar_indicador()
         mostrar_aviso("Grabación guardada")
+        # Solo se llega aquí si la grabación terminó, se guardó en disco y se
+        # registró en la base (los demás caminos hacen `return` antes).
+        notificaciones.show_recording_complete(
+            titulo, self.materia_texto, self.semana_texto, evento_id=grabacion_id)
 
     def _reiniciar_indicador(self):
         self.tiempo_txt = "00:00"

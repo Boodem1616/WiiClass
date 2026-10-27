@@ -15,11 +15,20 @@ from kivy.metrics import dp
 from kivymd.uix.screen import MDScreen
 
 import theme
+from notification_service import notificaciones
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "profile_tab.kv"))
 
 
 class ProfileTab(MDScreen):
+    def cerrar_sesion(self):
+        """Botón "Cerrar sesión": cierra y SOLO si el cierre terminó bien
+        muestra la notificación. Si `app.cerrar_sesion()` lanza una excepción,
+        se propaga igual que antes y la notificación no se dispara."""
+        from kivy.app import App
+        if App.get_running_app().cerrar_sesion():
+            notificaciones.show_logout_confirmation()
+
     def on_pre_enter(self, *args):
         self.refrescar()
 

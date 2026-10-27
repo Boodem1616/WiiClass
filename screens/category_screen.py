@@ -51,6 +51,7 @@ from kivymd.uix.screen import MDScreen
 import db
 import theme
 from downloads_manager import descargar_grabacion, descargar_varias
+from notification_service import notificaciones
 from screens.widgets import mostrar_aviso
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "category_screen.kv"))
@@ -298,9 +299,13 @@ class CategoryScreen(MDScreen):
         if not app.usuario or not self._seleccionadas:
             return
         ids = list(self._seleccionadas)
+        # Las que ya estaban descargadas no son una descarga nueva: no notifican.
+        nuevas = {i for i in ids if not db.esta_descargada(i)}
 
         def _cada_una(grabacion_id):
             self._refrescar_lista()
+            if grabacion_id in nuevas:
+                self._notificar_descarga(grabacion_id)
 
         def _completas():
             mostrar_aviso("Descarga terminada")
@@ -315,8 +320,12 @@ class CategoryScreen(MDScreen):
         if not app.usuario:
             return
 
+        ya_descargada = db.esta_descargada(grabacion_id)
+
         def _completa(g_id):
             self._refrescar_lista()
+            if not ya_descargada:
+                self._notificar_descarga(g_id)
 
         def _error(g_id, exc):
             # Antes un error de descarga no se mostraba: el ícono se quedaba
@@ -325,3 +334,15 @@ class CategoryScreen(MDScreen):
 
         descargar_grabacion(app.usuario["id"], grabacion_id,
                             on_completa=_completa, on_error=_error)
+
+    @staticmethod
+    def _notificar_descarga(grabacion_id: int):
+        """Notificación "Se ha descargado {titulo} correctamente!". Solo se
+        llama desde `on_completa` (descarga terminada); los errores no pasan
+        por aquí. Nunca interrumpe la pantalla: fallos solo al log."""
+        try:
+            grabacion = db.get_grabacion(grabacion_id)
+            titulo = grabacion["nombre"] if grabacion else ""
+            notificaciones.show_download_complete(titulo, evento_id=grabacion_id)
+        except Exception as exc:
+            print(f"[category_screen] No se pudo notificar la descarga: {exc}")

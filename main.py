@@ -156,7 +156,7 @@ class WiiClassApp(MDApp):
         # que la red aparecía o desaparecía).
         main_screen.build_tabs(offline=offline, refrescar=True, rol=self.rol)
 
-    def cerrar_sesion(self):
+    def cerrar_sesion(self) -> bool:
         Clock.unschedule(self._chequear_conectividad)
         # Si el profesor estaba grabando, se guarda antes de salir.
         self.sm.get_screen("main").reiniciar_sesion()
@@ -166,6 +166,9 @@ class WiiClassApp(MDApp):
         notificaciones_state.reiniciar()
         self.sm.transition.direction = "right"
         self.sm.current = "login"
+        # Devuelve True solo si todo el cierre terminó sin excepciones (si
+        # algo falla antes, la excepción se propaga y nadie notifica éxito).
+        return True
 
     def abrir_categoria(self, categoria_id: int, nombre: str):
         cat_screen = self.sm.get_screen("category_screen")

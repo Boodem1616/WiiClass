@@ -41,6 +41,7 @@ from kivymd.uix.menu import MDDropdownMenu
 
 import db
 import theme
+from notification_service import notificaciones
 from screens.gradient_utils import aplicar_degradado
 from screens.widgets import mostrar_aviso
 
@@ -162,6 +163,18 @@ class LoginScreen(MDScreen):
 
         from kivy.app import App
         App.get_running_app().on_login_success(usuario["id"])
+        self._notificar_bienvenida(usuario, correo)
+
+    @staticmethod
+    def _notificar_bienvenida(usuario, correo: str):
+        """Notificación "Bienvenido {nombre}" tras un login exitoso.
+        Sin nombre disponible usa el correo; si tampoco, solo "Bienvenido".
+        Nunca interrumpe el login: cualquier fallo queda en el log."""
+        try:
+            nombre = (usuario["nombre"] or "").strip() or correo
+            notificaciones.show_login_welcome(nombre, usuario_id=usuario["id"])
+        except Exception as exc:
+            print(f"[login_screen] No se pudo notificar la bienvenida: {exc}")
 
     @staticmethod
     def _toast(mensaje: str):
