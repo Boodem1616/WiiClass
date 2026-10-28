@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "intervalo_actualizacion_seg": 60,
+  "intervalo_actualizacion_seg": 6,
   "anuncio": {
     "activo": true,
     "tipo": "info",
-    "titulo": "Semana de pruebas",
+    "titulo": "Semana ",
     "mensaje": "Test de anuncio."
   },
   "funciones": {
@@ -13,7 +13,13 @@
     "notificaciones_sistema": true
   },
   "reproductor": {
-    "velocidades": [0.5, 1.0, 1.25, 1.5, 2.0]
+    "velocidades": [
+      0.5,
+      1,
+      1.25,
+      1.5,
+      2
+    ]
   },
   "textos": {
     "saludo": ""

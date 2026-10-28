@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuración remota</title>
+<style>
+  :root {
+    --fondo: #f3f5f4; --superficie: #ffffff; --texto: #1c2321; --suave: #5d6a66;
+    --borde: #cdd5d2; --acento: #0f766e; --acento-texto: #ffffff;
+    --ok: #146c43; --error: #b42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fondo: #121715; --superficie: #1b2220; --texto: #e6ecea; --suave: #93a19c;
+      --borde: #34403c; --acento: #2dd4bf; --acento-texto: #07201c;
+      --ok: #5fd39a; --error: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { margin: 0 0 24px; color: var(--suave); font-size: .9rem; }
+  fieldset {
+    border: 1px solid var(--borde); border-radius: 8px; background: var(--superficie);
+    margin: 0 0 16px; padding: 8px 16px 16px;
+  }
+  legend { font-weight: 600; padding: 0 6px; }
+  label.campo { display: block; margin-top: 12px; font-size: .9rem; color: var(--suave); }
+  input[type=text], input[type=number], select, textarea {
+    display: block; width: 100%; margin-top: 4px; padding: 8px 10px;
+    font: inherit; color: var(--texto); background: var(--fondo);
+    border: 1px solid var(--borde); border-radius: 6px;
+  }
+  textarea { min-height: 84px; resize: vertical; }
+  :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .interruptor {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--borde); cursor: pointer;
+  }
+  .interruptor:last-child { border-bottom: 0; }
+  .interruptor input { position: absolute; opacity: 0; }
+  .pista {
+    flex: none; width: 42px; height: 24px; border-radius: 12px;
+    background: var(--borde); position: relative; transition: background .15s;
+  }
+  .pista::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+    border-radius: 50%; background: #fff; transition: transform .15s;
+  }
+  .interruptor input:checked + .pista { background: var(--acento); }
+  .interruptor input:checked + .pista::after { transform: translateX(18px); }
+  .interruptor input:focus-visible + .pista { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .ayuda { margin: 4px 0 0; font-size: .8rem; color: var(--suave); }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--suave); font-size: .9rem; }
+  pre {
+    margin: 8px 0 0; padding: 12px; overflow: auto; font-size: .8rem;
+    background: var(--superficie); border: 1px solid var(--borde); border-radius: 6px;
+  }
+  .barra {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--superficie);
+    border-top: 1px solid var(--borde); padding: 12px 16px;
+  }
+  .barra div { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .estado { flex: 1; font-size: .9rem; color: var(--suave); min-width: 0; }
+  .estado.ok { color: var(--ok); }
+  .estado.err { color: var(--error); }
+  button {
+    font: inherit; padding: 8px 16px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--borde); background: var(--superficie); color: var(--texto);
+  }
+  button.principal { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Configuración remota</h1>
+  <p class="sub">Edita <code>app_config.json</code>. La app verá el cambio en su próxima actualización.</p>
+
+  <form id="form" autocomplete="off">
+    <fieldset>
+      <legend>General</legend>
+      <label class="campo">Versión
+        <input type="text" id="version" readonly>
+      </label>
+      <label class="campo">Intervalo de actualización (segundos)
+        <input type="number" id="intervalo" min="1" step="1">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Anuncio</legend>
+      <label class="interruptor">
+        <span>Mostrar anuncio</span>
+        <input type="checkbox" id="anuncio_activo"><span class="pista"></span>
+      </label>
+      <label class="campo">Tipo
+        <select id="anuncio_tipo"></select>
+      </label>
+      <label class="campo">Título
+        <input type="text" id="anuncio_titulo">
+      </label>
+      <label class="campo">Mensaje
+        <textarea id="anuncio_mensaje"></textarea>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Funciones</legend>
+      <div id="funciones"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Reproductor</legend>
+      <label class="campo">Velocidades disponibles
+        <input type="text" id="velocidades">
+      </label>
+      <p class="ayuda">Números separados por comas, por ejemplo: 0.5, 1, 1.25, 1.5, 2</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Textos</legend>
+      <label class="campo">Saludo
+        <input type="text" id="saludo">
+      </label>
+    </fieldset>
+  </form>
+
+  <details>
+    <summary>Ver JSON resultante</summary>
+    <pre id="vista"></pre>
+  </details>
+</main>
+
+<div class="barra">
+  <div>
+    <span class="estado" id="estado" role="status"></span>
+    <button type="button" id="recargar">Descartar cambios</button>
+    <button type="button" id="guardar" class="principal">Guardar cambios</button>
+  </div>
+</div>
+
+<script>
+const URL_CONFIG = "/app_config.json";
+const TIPOS = ["info", "advertencia", "error", "exito"];
+const $ = (id) => document.getElementById(id);
+let cfg = {};
+let sucio = false;
+
+function estado(texto, clase) {
+  const e = $("estado");
+  e.textContent = texto;
+  e.className = "estado" + (clase ? " " + clase : "");
+}
+
+function marcarSucio(valor) {
+  sucio = valor;
+  $("guardar").disabled = !valor;
+}
+
+function pintar() {
+  const a = cfg.anuncio || {};
+  $("version").value = cfg.version ?? "";
+  $("intervalo").value = cfg.intervalo_actualizacion_seg ?? "";
+  $("anuncio_activo").checked = !!a.activo;
+  $("anuncio_titulo").value = a.titulo ?? "";
+  $("anuncio_mensaje").value = a.mensaje ?? "";
+
+  const tipos = TIPOS.includes(a.tipo) || !a.tipo ? TIPOS : [...TIPOS, a.tipo];
+  const sel = $("anuncio_tipo");
+  sel.replaceChildren(...tipos.map((t) => new Option(t, t)));
+  sel.value = a.tipo ?? "info";
+
+  const cont = $("funciones");
+  cont.replaceChildren();
+  for (const [clave, valor] of Object.entries(cfg.funciones || {})) {
+    const label = document.createElement("label");
+    label.className = "interruptor";
+    const nombre = document.createElement("span");
+    nombre.textContent = clave;
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !!valor;
+    input.dataset.clave = clave;
+    const pista = document.createElement("span");
+    pista.className = "pista";
+    label.append(nombre, input, pista);
+    cont.append(label);
+  }
+
+  $("velocidades").value = ((cfg.reproductor || {}).velocidades || []).join(", ");
+  $("saludo").value = (cfg.textos || {}).saludo ?? "";
+  vista();
+}
+
+// Copia el formulario sobre cfg conservando cualquier clave que el formulario no muestre.
+function leer() {
+  const velocidades = $("velocidades").value
+    .split(/[,\s]+/).filter(Boolean).map(Number);
+  if (!velocidades.length || velocidades.some((n) => !Number.isFinite(n) || n <= 0)) {
+    throw new Error("Las velocidades deben ser números mayores que 0.");
+  }
+  const intervalo = Number($("intervalo").value);
+  if (!Number.isInteger(intervalo) || intervalo < 1) {
+    throw new Error("El intervalo debe ser un entero de 1 o más.");
+  }
+
+  const funciones = { ...(cfg.funciones || {}) };
+  document.querySelectorAll("#funciones input").forEach((i) => {
+    funciones[i.dataset.clave] = i.checked;
+  });
+
+  return {
+    ...cfg,
+    intervalo_actualizacion_seg: intervalo,
+    anuncio: {
+      ...(cfg.anuncio || {}),
+      activo: $("anuncio_activo").checked,
+      tipo: $("anuncio_tipo").value,
+      titulo: $("anuncio_titulo").value,
+      mensaje: $("anuncio_mensaje").value,
+    },
+    funciones,
+    reproductor: { ...(cfg.reproductor || {}), velocidades },
+    textos: { ...(cfg.textos || {}), saludo: $("saludo").value },
+  };
+}
+
+function vista() {
+  try {
+    $("vista").textContent = JSON.stringify(leer(), null, 2);
+  } catch (e) {
+    $("vista").textContent = e.message;
+  }
+}
+
+async function cargar() {
+  try {
+    const r = await fetch(URL_CONFIG, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    cfg = await r.json();
+    pintar();
+    marcarSucio(false);
+    estado("Configuración cargada.");
+  } catch (e) {
+    estado("No se pudo cargar: " + e.message, "err");
+  }
+}
+
+async function guardar() {
+  let nuevo;
+  try {
+    nuevo = leer();
+  } catch (e) {
+    return estado(e.message, "err");
+  }
+  $("guardar").disabled = true;
+  estado("Guardando…");
+  try {
+    const r = await fetch(URL_CONFIG, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuevo, null, 2) + "\n",
+    });
+    const datos = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(datos.error || "HTTP " + r.status);
+    cfg = nuevo;
+    marcarSucio(false);
+    estado("Guardado a las " + new Date().toLocaleTimeString() + ".", "ok");
+  } catch (e) {
+    marcarSucio(true);
+    estado("No se pudo guardar: " + e.message, "err");
+  }
+}
+
+$("form").addEventListener("input", () => { marcarSucio(true); vista(); });
+$("form").addEventListener("submit", (e) => e.preventDefault());
+$("guardar").addEventListener("click", guardar);
+$("recargar").addEventListener("click", cargar);
+window.addEventListener("beforeunload", (e) => { if (sucio) e.preventDefault(); });
+
+cargar();
+</script>
+</body>
+</html>
