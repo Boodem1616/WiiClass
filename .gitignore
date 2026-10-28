@@ -8,3 +8,4 @@ bin/
 *.apk
 .DS_Store
 grabaciones/
+datos/

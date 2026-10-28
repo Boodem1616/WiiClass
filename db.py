@@ -7,9 +7,14 @@ Contiene:
   - Funciones de consulta usadas por las pantallas.
 """
 
+import logging
 import sqlite3
 import os
 from datetime import datetime
+
+import storage
+
+log = logging.getLogger("wiiclass.db")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "wiiclass.db")
 
@@ -109,12 +114,21 @@ def init_db(seed: bool = True):
     cur.close()
     if seed:
         _seed_profesor_demo(conn)
+    # Recupera desde los JSON lo que la base no tenga (grabaciones de
+    # profesores y notificaciones). Va DESPUÉS de los datos semilla para que
+    # existan las materias y los usuarios a los que se asocian.
+    _restaurar_desde_json(conn)
     conn.close()
 
     # Se recalcula siempre (es determinístico e idempotente): así, si se
     # agregan nuevas grabaciones más adelante, las semanas de toda la
     # categoría se mantienen consistentes entre sí.
     recalcular_semanas()
+
+    # Deja los JSON al día con lo que quedó en la base (también los crea la
+    # primera vez que se abre una versión con persistencia).
+    exportar_grabaciones()
+    exportar_notificaciones()
 
 
 def _migrar_columna_semana(conn):
@@ -218,12 +232,16 @@ def _seed_demo_data(conn):
         (1, "Descarga completada: Clase 1 - Cinemática", "descarga_completada", 1, 2940),
         (1, "Nueva grabación disponible en Humanidades: Clase 2 - Ética", "nueva_grabacion", 1, 4320),
     ]
-    conn.executemany(
-        """INSERT INTO Notificaciones (usuario_id, mensaje, tipo, leida, fecha)
-           VALUES (?, ?, ?, ?, datetime('now', '-' || ? || ' minutes'))""",
-        notificaciones,
-    )
-    conn.commit()
+    # Si hay un respaldo JSON de notificaciones, se restaura ese (con su
+    # estado leída/no leída) en vez de sembrar de nuevo las de demostración,
+    # que quedarían duplicadas con fechas distintas.
+    if not storage.cargar_notificaciones():
+        conn.executemany(
+            """INSERT INTO Notificaciones (usuario_id, mensaje, tipo, leida, fecha)
+               VALUES (?, ?, ?, ?, datetime('now', '-' || ? || ' minutes'))""",
+            notificaciones,
+        )
+        conn.commit()
 
     conn.execute(
         """INSERT INTO Descargas_offline (grabacion_id, ruta_local, peso_mb, fecha_descarga)
@@ -403,6 +421,7 @@ def marcar_notificacion_leida(notificacion_id: int):
     conn.execute("UPDATE Notificaciones SET leida = 1 WHERE id = ?", (notificacion_id,))
     conn.commit()
     conn.close()
+    exportar_notificaciones()
 
 
 def marcar_todas_leidas(usuario_id: int):
@@ -412,6 +431,7 @@ def marcar_todas_leidas(usuario_id: int):
     conn.execute("UPDATE Notificaciones SET leida = 1 WHERE usuario_id = ?", (usuario_id,))
     conn.commit()
     conn.close()
+    exportar_notificaciones()
 
 
 def crear_notificacion(usuario_id: int, mensaje: str, tipo: str):
@@ -423,6 +443,7 @@ def crear_notificacion(usuario_id: int, mensaje: str, tipo: str):
     )
     conn.commit()
     conn.close()
+    exportar_notificaciones()
 
 
 def get_descargas_agrupadas():
@@ -566,4 +587,154 @@ def registrar_grabacion_profesor(profesor_id: int, categoria_id: int, semana: in
     conn.commit()
     nuevo_id = cur.lastrowid
     conn.close()
+    exportar_grabaciones()
     return nuevo_id
+
+
+# ---------------------------------------------------------------------------
+# Persistencia JSON (ver storage.py)
+#
+# SQLite sigue siendo la fuente que leen las pantallas. Los JSON son un
+# respaldo duradero:
+#   * `exportar_*`  -> se llaman tras cada cambio; FUSIONAN la base con el
+#     JSON (nunca borran entradas del JSON), así un registro que no se pudo
+#     restaurar (p. ej. el audio ya no está) no se pierde del respaldo.
+#   * `_restaurar_desde_json` -> se llama al iniciar; inserta en la base lo
+#     que el JSON tiene y la base no.
+# Los usuarios y las materias se enlazan por CORREO y NOMBRE (no por id), de
+# modo que el respaldo sigue valiendo aunque la base se recree con otros ids.
+# Un fallo de disco nunca interrumpe la app: solo queda en el log.
+# ---------------------------------------------------------------------------
+
+def _ruta_absoluta(ruta: str) -> str:
+    return ruta if os.path.isabs(ruta) else os.path.join(os.path.dirname(__file__), ruta)
+
+
+def _clave_grabacion(g: dict):
+    return ((g.get("profesor_correo") or "").lower(), g.get("url_audio"))
+
+
+def _clave_notificacion(n: dict):
+    return ((n.get("usuario_correo") or "").lower(), n.get("mensaje"),
+            n.get("tipo"), n.get("fecha"))
+
+
+def exportar_grabaciones() -> bool:
+    """Respalda en JSON las grabaciones subidas por profesores."""
+    try:
+        conn = get_connection()
+        rows = conn.execute(
+            """SELECT Grabaciones.id, Grabaciones.nombre, Grabaciones.url_audio,
+                      Grabaciones.fecha_subida, Grabaciones.duracion_seg,
+                      Grabaciones.semana, Grabaciones.categoria_id,
+                      Categorias.nombre AS categoria_nombre,
+                      Usuarios.correo AS profesor_correo
+               FROM Grabaciones
+               JOIN Categorias ON Grabaciones.categoria_id = Categorias.id
+               JOIN Usuarios ON Grabaciones.profesor_id = Usuarios.id
+               WHERE Grabaciones.profesor_id IS NOT NULL
+               ORDER BY Grabaciones.id"""
+        ).fetchall()
+        conn.close()
+        fusion = {_clave_grabacion(g): g for g in storage.cargar_grabaciones()}
+        for r in rows:
+            fusion[_clave_grabacion(dict(r))] = dict(r)
+        return storage.guardar_grabaciones(list(fusion.values()))
+    except Exception:
+        log.exception("No se pudo respaldar las grabaciones en JSON")
+        return False
+
+
+def exportar_notificaciones() -> bool:
+    """Respalda en JSON las notificaciones (incluye el estado leída)."""
+    try:
+        conn = get_connection()
+        rows = conn.execute(
+            """SELECT Notificaciones.id, Usuarios.correo AS usuario_correo,
+                      Notificaciones.mensaje, Notificaciones.tipo,
+                      Notificaciones.leida, Notificaciones.fecha
+               FROM Notificaciones
+               JOIN Usuarios ON Notificaciones.usuario_id = Usuarios.id
+               ORDER BY Notificaciones.id"""
+        ).fetchall()
+        conn.close()
+        fusion = {_clave_notificacion(n): n for n in storage.cargar_notificaciones()}
+        for r in rows:
+            fusion[_clave_notificacion(dict(r))] = dict(r)
+        return storage.guardar_notificaciones(list(fusion.values()))
+    except Exception:
+        log.exception("No se pudo respaldar las notificaciones en JSON")
+        return False
+
+
+def _restaurar_desde_json(conn):
+    """Inserta en la base las grabaciones y notificaciones que están en los
+    JSON y faltan en SQLite. Idempotente: se puede llamar en cada arranque."""
+    try:
+        _restaurar_grabaciones(conn)
+        _restaurar_notificaciones(conn)
+        conn.commit()
+    except Exception:
+        log.exception("No se pudo restaurar desde los JSON")
+
+
+def _restaurar_grabaciones(conn):
+    for g in storage.cargar_grabaciones():
+        ruta = g.get("url_audio")
+        if not ruta or not g.get("nombre"):
+            continue
+        prof = conn.execute(
+            "SELECT id FROM Usuarios WHERE lower(correo) = lower(?) AND rol = 'Profesor'",
+            (g.get("profesor_correo") or "",),
+        ).fetchone()
+        if prof is None:
+            continue
+        if conn.execute(
+            "SELECT 1 FROM Grabaciones WHERE url_audio = ? AND profesor_id = ?",
+            (ruta, prof["id"]),
+        ).fetchone():
+            continue
+        if not os.path.exists(_ruta_absoluta(ruta)):
+            # El audio ya no está en el disco: se conserva el respaldo, pero
+            # no se muestra una clase que no se puede reproducir.
+            log.warning("No se restaura '%s': falta el archivo %s", g["nombre"], ruta)
+            continue
+        cat = conn.execute(
+            "SELECT id FROM Categorias WHERE nombre = ?", (g.get("categoria_nombre"),)
+        ).fetchone() or conn.execute(
+            "SELECT id FROM Categorias WHERE id = ?", (g.get("categoria_id"),)
+        ).fetchone()
+        if cat is None:
+            continue
+        conn.execute(
+            """INSERT INTO Grabaciones
+                 (categoria_id, nombre, url_audio, fecha_subida, duracion_seg, semana, profesor_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (cat["id"], g["nombre"], ruta, g.get("fecha_subida"),
+             g.get("duracion_seg"), g.get("semana"), prof["id"]),
+        )
+
+
+def _restaurar_notificaciones(conn):
+    for n in storage.cargar_notificaciones():
+        if not n.get("mensaje") or not n.get("tipo"):
+            continue
+        usuario = conn.execute(
+            "SELECT id FROM Usuarios WHERE lower(correo) = lower(?)",
+            (n.get("usuario_correo") or "",),
+        ).fetchone()
+        if usuario is None:
+            continue
+        existente = conn.execute(
+            """SELECT id, leida FROM Notificaciones
+               WHERE usuario_id = ? AND mensaje = ? AND tipo = ? AND fecha IS ?""",
+            (usuario["id"], n["mensaje"], n["tipo"], n.get("fecha")),
+        ).fetchone()
+        if existente is None:
+            conn.execute(
+                """INSERT INTO Notificaciones (usuario_id, mensaje, tipo, leida, fecha)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (usuario["id"], n["mensaje"], n["tipo"], 1 if n.get("leida") else 0, n.get("fecha")),
+            )
+        elif n.get("leida") and not existente["leida"]:
+            conn.execute("UPDATE Notificaciones SET leida = 1 WHERE id = ?", (existente["id"],))

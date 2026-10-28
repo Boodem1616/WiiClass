@@ -22,7 +22,7 @@ if platform != "android":
 
 import threading
 
-from kivy.uix.screenmanager import SlideTransition
+from kivy.uix.screenmanager import NoTransition, SlideTransition
 from kivy.clock import Clock
 from kivy.core.window import Window
 
@@ -30,6 +30,7 @@ from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
 import db
+import storage
 import theme
 from screens.login_screen import LoginScreen
 from screens.main_screen import MainScreen, tabs_para_rol
@@ -108,11 +109,44 @@ class WiiClassApp(MDApp):
         self.sm.add_widget(PlayerScreen(name="player_screen"))
         self.sm.add_widget(NotificationsAllScreen(name="notifications_all"))
         self.sm.current = "login"
+        # Si había una sesión guardada (sesion.json), se reanuda sin pasar
+        # por el Login. Va al final de build(): necesita las pantallas ya
+        # creadas.
+        self._restaurar_sesion()
         return self.sm
 
     # ---- Navegación / sesión -----------------------------------------
-    def on_login_success(self, usuario_id: int):
+    def _restaurar_sesion(self) -> bool:
+        """Reanuda la sesión guardada la última vez. Devuelve True si entró.
+
+        Se valida contra la base: si el usuario ya no existe, o cambió su
+        correo o rol, la sesión guardada se descarta y se muestra el Login.
+        Nunca lanza excepciones: ante cualquier problema, se muestra el Login.
+        """
+        try:
+            sesion = storage.cargar_sesion()
+            if sesion is None:
+                return False
+            usuario = db.get_usuario(sesion["usuario_id"])
+            if (usuario is None
+                    or (usuario["correo"] or "").lower() != sesion["correo"]
+                    or usuario["rol"] != sesion["rol"]):
+                storage.borrar_sesion()
+                return False
+            self.on_login_success(usuario["id"], restaurada=True)
+            return True
+        except Exception as exc:
+            print(f"[main] No se pudo restaurar la sesión: {exc}")
+            self.usuario = None
+            self.sm.current = "login"
+            return False
+
+    def on_login_success(self, usuario_id: int, restaurada: bool = False):
         self.usuario = db.get_usuario(usuario_id)
+        storage.guardar_sesion(
+            self.usuario["id"], self.usuario["correo"],
+            self.usuario["rol"], self.usuario["institucion_id"],
+        )
         main_screen = self.sm.get_screen("main")
         # `is_online()` abre un socket con hasta 1.5s de timeout: llamarlo
         # aquí directamente congelaba la UI en cada login (se notaba
@@ -122,8 +156,17 @@ class WiiClassApp(MDApp):
         # plano — mismo patrón que `downloads_manager.py`.
         self.offline = False
         main_screen.build_tabs(offline=False, rol=self.rol)
-        self.sm.transition.direction = "left"
-        self.sm.current = "main"
+        if restaurada:
+            # Al reabrir la app no hay "pantalla anterior" que deslizar:
+            # se entra directo, y la transición normal se repone enseguida.
+            anterior = self.sm.transition
+            self.sm.transition = NoTransition()
+            self.sm.current = "main"
+            Clock.schedule_once(
+                lambda _dt: setattr(self.sm, "transition", anterior), 0.5)
+        else:
+            self.sm.transition.direction = "left"
+            self.sm.current = "main"
 
         # Revisión periódica de conectividad para mostrar/ocultar
         # el tab "Descargas" dinámicamente (requisito: solo visible offline).
@@ -158,6 +201,10 @@ class WiiClassApp(MDApp):
 
     def cerrar_sesion(self) -> bool:
         Clock.unschedule(self._chequear_conectividad)
+        # Primero se borra la sesión guardada: cerrar sesión debe ser
+        # definitivo aunque algo falle más abajo (la próxima apertura
+        # mostrará el Login).
+        storage.borrar_sesion()
         # Si el profesor estaba grabando, se guarda antes de salir.
         self.sm.get_screen("main").reiniciar_sesion()
         self.usuario = None
