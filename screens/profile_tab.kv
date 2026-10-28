@@ -92,6 +92,17 @@
                     id: campo_institucion
                     label: "Institución"
 
+            MDButton:
+                style: "tonal"
+                pos_hint: {"center_x": 0.5}
+                on_release: app.abrir_config_remota()
+
+                MDButtonIcon:
+                    icon: "cloud-sync-outline"
+
+                MDButtonText:
+                    text: "Configuración remota"
+
             Widget:
 
             MDButton:

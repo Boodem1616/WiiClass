@@ -31,7 +31,12 @@ from screens.widgets import mostrar_aviso
 
 Builder.load_file(os.path.join(os.path.dirname(__file__), "player_screen.kv"))
 
-SPEEDS = [0.5, 1.0, 1.5, 2.0]
+from remote_config import config_remota
+
+
+def _speeds():
+    """Velocidades vigentes (configuración remota; por defecto 0.5/1/1.5/2)."""
+    return config_remota.get("reproductor.velocidades", [0.5, 1.0, 1.5, 2.0])
 
 
 class PlayerScreen(MDScreen):
@@ -57,16 +62,19 @@ class PlayerScreen(MDScreen):
         row = self.ids.speed_row
         row.clear_widgets()
         self._speed_buttons = {}
-        for s in SPEEDS:
+        for s in _speeds():
             btn = Factory.SpeedButton()
             btn.value = s
             btn.active = (s == 1.0)
-            btn.texto = f"{s}x"
+            btn.texto = f"{s:g}x"
             btn.bind(on_release=lambda inst, sp=s: self.set_speed(sp))
             row.add_widget(btn)
             self._speed_buttons[s] = btn
 
     def cargar_grabacion(self, grabacion_id: int, local_path: str = None):
+        # Las velocidades pueden haber cambiado remotamente desde la última clase.
+        if list(self._speed_buttons) != list(_speeds()):
+            self._build_speed_buttons()
         grab = db.get_grabacion(grabacion_id)
         if not grab:
             return

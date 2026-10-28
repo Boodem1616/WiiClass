@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "intervalo_actualizacion_seg": 60,
+  "anuncio": {
+    "activo": true,
+    "tipo": "info",
+    "titulo": "Semana de pruebas",
+    "mensaje": "Test de anuncio."
+  },
+  "funciones": {
+    "descargas": true,
+    "grabacion": true,
+    "notificaciones_sistema": true
+  },
+  "reproductor": {
+    "velocidades": [0.5, 1.0, 1.25, 1.5, 2.0]
+  },
+  "textos": {
+    "saludo": ""
+  }
+}

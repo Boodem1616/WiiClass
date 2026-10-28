@@ -145,6 +145,10 @@ class RecordingTab(MDScreen):
             self.iniciar_grabacion()
 
     def iniciar_grabacion(self):
+        from remote_config import config_remota
+        if not config_remota.funcion_activa("grabacion"):
+            mostrar_aviso("La grabación está desactivada temporalmente")
+            return
         titulo = self.ids.titulo.text.strip()
         if not self._materia_id:
             mostrar_aviso("Selecciona la materia")

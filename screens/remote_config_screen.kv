@@ -1,0 +1,90 @@
+#:import T theme
+
+<RemoteConfigScreen>:
+    name: "remote_config"
+    md_bg_color: T.BG
+
+    BoxLayout:
+        orientation: "vertical"
+
+        CabeceraDegradada:
+            size_hint_y: None
+            height: dp(64)
+            padding: dp(8), 0, dp(8), 0
+            spacing: dp(4)
+
+            BotonCabecera:
+                icon: "arrow-left"
+                on_release: app.volver_de_config_remota()
+
+            MDLabel:
+                text: "Configuración remota"
+                bold: True
+                font_style: "Title"
+                role: "large"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                halign: "left"
+                valign: "middle"
+                text_size: self.width, self.height
+
+            BotonCabecera:
+                icon: "progress-clock" if root.actualizando else "refresh"
+                disabled: root.actualizando
+                on_release: root.actualizar_ahora()
+
+        Hoja:
+            orientation: "vertical"
+
+            ScrollView:
+                do_scroll_x: False
+                bar_width: 0
+
+                BoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(14)
+                    padding: dp(20), dp(20), dp(20), dp(24)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                    TituloSeccion:
+                        text: "Lo que se está aplicando"
+
+                    Tarjeta:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: self.minimum_height + dp(16)
+                        padding: dp(14), dp(10)
+
+                        BoxLayout:
+                            id: valores
+                            orientation: "vertical"
+                            size_hint_y: None
+                            height: self.minimum_height
+
+                    TituloSeccion:
+                        text: "Estado de la fuente"
+
+                    Tarjeta:
+                        orientation: "vertical"
+                        size_hint_y: None
+                        height: self.minimum_height + dp(16)
+                        padding: dp(14), dp(10)
+
+                        BoxLayout:
+                            id: estado
+                            orientation: "vertical"
+                            size_hint_y: None
+                            height: self.minimum_height
+
+                    MDButton:
+                        style: "filled"
+                        pos_hint: {"center_x": 0.5}
+                        disabled: root.actualizando
+                        on_release: root.actualizar_ahora()
+
+                        MDButtonIcon:
+                            icon: "refresh"
+
+                        MDButtonText:
+                            text: "Actualizar ahora"

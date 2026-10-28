@@ -42,6 +42,7 @@ VERSION = 1
 ARCHIVO_SESION = "sesion.json"
 ARCHIVO_GRABACIONES = "grabaciones.json"
 ARCHIVO_NOTIFICACIONES = "notificaciones.json"
+ARCHIVO_CONFIG_REMOTA = "config_remota.json"
 
 ROLES_VALIDOS = ("Estudiante", "Profesor")
 
@@ -193,3 +194,16 @@ def cargar_notificaciones() -> list:
 
 def guardar_notificaciones(notificaciones: list) -> bool:
     return _escribir(ARCHIVO_NOTIFICACIONES, list(notificaciones))
+
+
+# ---------------------------------------------------------------------------
+# Caché de la configuración remota (ver remote_config.py)
+# ---------------------------------------------------------------------------
+def cargar_config_remota():
+    """Última configuración remota recibida ({config, etag, recibido, url}) o None."""
+    d = _leer(ARCHIVO_CONFIG_REMOTA, None)
+    return d if isinstance(d, dict) else None
+
+
+def guardar_config_remota(cache: dict) -> bool:
+    return _escribir(ARCHIVO_CONFIG_REMOTA, dict(cache))

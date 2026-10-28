@@ -16,6 +16,7 @@ import os
 from kivy.lang import Builder
 from kivy.metrics import dp
 from kivy.factory import Factory
+from kivy.properties import StringProperty, ColorProperty
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.boxlayout import BoxLayout
 
@@ -23,10 +24,31 @@ from kivymd.uix.screen import MDScreen
 
 import db
 import theme
+from remote_config import config_remota
 
+
+
+class AnuncioCard(BoxLayout):
+    """Anuncio remoto. Sus propiedades son reales (no de clase dinámica del
+    .kv), así que se pueden pasar como kwargs al constructor."""
+    titulo = StringProperty("")
+    mensaje = StringProperty("")
+    icono = StringProperty("information-outline")
+    color = ColorProperty(theme.PRIMARY)
+    fondo = ColorProperty(theme.MIST)
+
+
+Factory.register("AnuncioCard", cls=AnuncioCard)
 Builder.load_file(os.path.join(os.path.dirname(__file__), "home_tab.kv"))
 
 N_RECIENTES = 3
+
+# tipo de anuncio -> (ícono, color de acento, color de fondo)
+ESTILOS_ANUNCIO = {
+    "info": ("information-outline", theme.PRIMARY, theme.MIST),
+    "aviso": ("alert-outline", (0.80, 0.50, 0.05, 1), (1.0, 0.95, 0.82, 1)),
+    "critico": ("alert-octagon-outline", theme.DANGER, (1.0, 0.90, 0.91, 1)),
+}
 
 
 class HomeTab(MDScreen):
@@ -38,7 +60,8 @@ class HomeTab(MDScreen):
         app = App.get_running_app()
 
         # ---- Cabecera ----
-        self.ids.saludo.text = theme.saludo()
+        # Saludo personalizado remoto; si está vacío, el automático por hora.
+        self.ids.saludo.text = config_remota.get("textos.saludo") or theme.saludo()
         if app.usuario:
             nombre = app.usuario["nombre"]
             self.ids.nombre_usuario.text = nombre
@@ -47,6 +70,14 @@ class HomeTab(MDScreen):
         # ---- Contenido: se reconstruye completo (son pocos widgets) ----
         contenedor = self.ids.categorias_container
         contenedor.clear_widgets()
+
+        # Anuncio remoto (si la configuración lo activa)
+        anuncio = config_remota.get("anuncio") or {}
+        if anuncio.get("activo"):
+            icono, color, fondo = ESTILOS_ANUNCIO.get(anuncio.get("tipo"), ESTILOS_ANUNCIO["info"])
+            contenedor.add_widget(AnuncioCard(
+                titulo=anuncio.get("titulo", ""), mensaje=anuncio.get("mensaje", ""),
+                icono=icono, color=color, fondo=fondo))
 
         # Sección 1: categorías (scroll horizontal)
         contenedor.add_widget(Factory.TituloSeccion(text="Categorías"))

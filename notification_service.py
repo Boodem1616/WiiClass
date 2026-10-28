@@ -231,7 +231,9 @@ class _NullBackend(_Backend):
 # ---------------------------------------------------------------------------
 class NotificationService:
     def __init__(self, backend: _Backend = None, ventana_dedupe: float = VENTANA_DEDUPE_SEG,
-                 reloj=time.monotonic):
+                 reloj=time.monotonic, habilitado=None):
+        # `habilitado()` -> bool: interruptor externo (configuración remota).
+        self._habilitado = habilitado
         self._backend = backend
         self._ventana = ventana_dedupe
         self._reloj = reloj
@@ -277,6 +279,9 @@ class NotificationService:
 
     def _enviar(self, clave, mensaje: str) -> bool:
         try:
+            if self._habilitado is not None and not self._habilitado():
+                log.info("Notificaciones desactivadas por configuración remota")
+                return False
             if self._es_duplicada(clave):
                 log.info("Notificación duplicada omitida: %s", clave)
                 return False
@@ -322,4 +327,12 @@ class NotificationService:
 
 
 # Instancia única compartida por todas las pantallas.
-notificaciones = NotificationService()
+def _interruptor_remoto() -> bool:
+    try:
+        from remote_config import config_remota
+        return config_remota.funcion_activa("notificaciones_sistema")
+    except Exception:
+        return True
+
+
+notificaciones = NotificationService(habilitado=_interruptor_remoto)

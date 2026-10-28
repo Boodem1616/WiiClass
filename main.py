@@ -38,6 +38,8 @@ from screens.category_screen import CategoryScreen
 from screens.player_screen import PlayerScreen
 from screens.notifications_all_screen import NotificationsAllScreen
 from screens.notifications_state import notificaciones_state
+from screens.remote_config_screen import RemoteConfigScreen
+from remote_config import config_remota
 
 
 def is_online() -> bool:
@@ -108,12 +110,54 @@ class WiiClassApp(MDApp):
         self.sm.add_widget(CategoryScreen(name="category_screen"))
         self.sm.add_widget(PlayerScreen(name="player_screen"))
         self.sm.add_widget(NotificationsAllScreen(name="notifications_all"))
+        self.sm.add_widget(RemoteConfigScreen(name="remote_config"))
         self.sm.current = "login"
+        self._iniciar_config_remota()
         # Si había una sesión guardada (sesion.json), se reanuda sin pasar
         # por el Login. Va al final de build(): necesita las pantallas ya
         # creadas.
         self._restaurar_sesion()
         return self.sm
+
+    # ---- Configuración remota ------------------------------------------
+    # La app arranca con la última config guardada (o los valores por
+    # defecto) y consulta la fuente en segundo plano: nunca espera a la red.
+    def _iniciar_config_remota(self):
+        config_remota.suscribir(self._on_config_remota)
+        config_remota.actualizar()
+        self._programar_config_remota()
+
+    def _programar_config_remota(self):
+        Clock.unschedule(self._tick_config_remota)
+        Clock.schedule_interval(self._tick_config_remota, config_remota.segundos_hasta_proxima())
+
+    def _tick_config_remota(self, _dt):
+        config_remota.actualizar()
+
+    def on_pause(self):
+        return True  # Android: permite pausar sin cerrar y recibir on_resume
+
+    def on_resume(self):
+        # Al volver del segundo plano se consulta de inmediato.
+        config_remota.actualizar()
+        return True
+
+    def _on_config_remota(self, cambio: bool):
+        """Se llama (hilo principal) al terminar cada consulta."""
+        self._programar_config_remota()  # el intervalo también es configurable
+        pantalla = self.sm.get_screen("remote_config")
+        pantalla.al_terminar(cambio)
+        if cambio and self.usuario:
+            main_screen = self.sm.get_screen("main")
+            main_screen._refrescar_tab(main_screen._tab_actual)
+
+    def abrir_config_remota(self):
+        self.sm.transition.direction = "left"
+        self.sm.current = "remote_config"
+
+    def volver_de_config_remota(self):
+        self.sm.transition.direction = "right"
+        self.sm.current = "main"
 
     # ---- Navegación / sesión -----------------------------------------
     def _restaurar_sesion(self) -> bool:
@@ -136,6 +180,8 @@ class WiiClassApp(MDApp):
             self.on_login_success(usuario["id"], restaurada=True)
             return True
         except Exception as exc:
+            import traceback
+            traceback.print_exc()
             print(f"[main] No se pudo restaurar la sesión: {exc}")
             self.usuario = None
             self.sm.current = "login"

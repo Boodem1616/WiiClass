@@ -51,6 +51,7 @@ from kivymd.uix.screen import MDScreen
 import db
 import theme
 from downloads_manager import descargar_grabacion, descargar_varias
+from remote_config import config_remota
 from notification_service import notificaciones
 from screens.widgets import mostrar_aviso
 
@@ -293,9 +294,18 @@ class CategoryScreen(MDScreen):
         self.num_seleccionadas = 0
         self._refrescar_lista()
 
+    @staticmethod
+    def _descargas_permitidas() -> bool:
+        if config_remota.funcion_activa("descargas"):
+            return True
+        mostrar_aviso("Las descargas están desactivadas temporalmente")
+        return False
+
     def descargar_seleccionadas(self):
         from kivy.app import App
         app = App.get_running_app()
+        if not self._descargas_permitidas():
+            return
         if not app.usuario or not self._seleccionadas:
             return
         ids = list(self._seleccionadas)
@@ -317,7 +327,7 @@ class CategoryScreen(MDScreen):
     def descargar_una(self, grabacion_id: int):
         from kivy.app import App
         app = App.get_running_app()
-        if not app.usuario:
+        if not app.usuario or not self._descargas_permitidas():
             return
 
         ya_descargada = db.esta_descargada(grabacion_id)
