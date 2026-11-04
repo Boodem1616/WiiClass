@@ -47,10 +47,6 @@ class DesktopRecorder:
         self._ruta = None
         self._inicio = 0.0
 
-    @property
-    def activa(self) -> bool:
-        return self._stream is not None
-
     def iniciar(self, ruta_base: str) -> str:
         try:
             import sounddevice as sd
@@ -111,10 +107,6 @@ class AndroidRecorder:
         self._mr = None
         self._ruta = None
         self._inicio = 0.0
-
-    @property
-    def activa(self) -> bool:
-        return self._mr is not None
 
     @staticmethod
     def tiene_permiso() -> bool:

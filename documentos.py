@@ -139,13 +139,6 @@ def carpeta_documentos() -> str:
     return os.path.join(_hogar(), "Documents")
 
 
-def descripcion_destino(subcarpeta: str = SUBCARPETA) -> str:
-    """Texto corto para mostrar al usuario dónde quedan los audios."""
-    if plataforma() == "android":
-        return f"Documents/{subcarpeta}"
-    return os.path.join(carpeta_documentos(), subcarpeta)
-
-
 # ---------------------------------------------------------------------------
 # Nombres de archivo
 # ---------------------------------------------------------------------------

@@ -233,10 +233,6 @@ def registrar(nombre, data=None):
         return None
 
 
-# Nombre usado en las diapositivas de la clase.
-log_evento = registrar
-
-
 def cargar() -> list:
     """Todos los eventos registrados (incluye los aún no volcados a disco)."""
     with _lock:

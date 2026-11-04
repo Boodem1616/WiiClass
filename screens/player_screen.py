@@ -20,7 +20,6 @@ import os
 
 from kivy.lang import Builder
 from kivy.clock import Clock
-from kivy.metrics import dp
 from kivy.factory import Factory
 
 from kivymd.uix.screen import MDScreen

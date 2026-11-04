@@ -10,7 +10,6 @@ Compatible con KivyMD 2.0.0.
 import os
 
 from kivy.lang import Builder
-from kivy.metrics import dp
 
 from kivymd.uix.screen import MDScreen
 

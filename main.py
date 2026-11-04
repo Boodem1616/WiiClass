@@ -74,10 +74,6 @@ class WiiClassApp(MDApp):
     def rol(self) -> str:
         return self.usuario["rol"] if self.usuario else "Estudiante"
 
-    @property
-    def es_profesor(self) -> bool:
-        return self.rol == "Profesor"
-
     def build(self):
         # "Blue" en vez de "Indigo": Indigo genera tonos lavanda/rosados en
         # los componentes que KivyMD colorea solo (barra de navegación,

@@ -19,10 +19,8 @@ Este módulo NO importa Kivy: es Python puro y se puede probar por separado.
 from datetime import datetime, timezone
 
 # ---- Paleta (RGBA, valores 0-1, como espera Kivy) -----------------------
-NAVY = (0.05, 0.09, 0.28, 1)         # #0D1747  tinta muy oscura (texto sobre degradado)
 PRIMARY = (0.09, 0.16, 0.55, 1)      # #172A8C  azul principal (botones, íconos activos)
 BLUE = (0.16, 0.38, 0.90, 1)         # #2961E6  azul brillante (portada del reproductor)
-SKY = (0.55, 0.72, 1.00, 1)          # #8CB8FF  azul cielo (detalles suaves)
 MIST = (0.89, 0.93, 1.00, 1)         # #E3EDFF  azul muy claro (fichas, seleccionado)
 BG = (0.955, 0.970, 1.00, 1)         # #F4F7FF  fondo de pantallas ("papel")
 SURFACE = (1, 1, 1, 1)               # tarjetas

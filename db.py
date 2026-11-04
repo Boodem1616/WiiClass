@@ -416,14 +416,6 @@ def get_notificaciones(usuario_id: int):
     return rows
 
 
-def marcar_notificacion_leida(notificacion_id: int):
-    conn = get_connection()
-    conn.execute("UPDATE Notificaciones SET leida = 1 WHERE id = ?", (notificacion_id,))
-    conn.commit()
-    conn.close()
-    exportar_notificaciones()
-
-
 def marcar_todas_leidas(usuario_id: int):
     """Marca como leídas todas las notificaciones del usuario (se llama al
     salir de la pestaña Alertas)."""
