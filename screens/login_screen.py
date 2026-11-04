@@ -39,6 +39,7 @@ from kivy.properties import ObjectProperty, StringProperty
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.menu import MDDropdownMenu
 
+import analytics
 import db
 import theme
 from notification_service import notificaciones
@@ -149,15 +150,20 @@ class LoginScreen(MDScreen):
         # inicio/fin son parte de ella (antes se descartaban en silencio).
         password = self.ids.password.text
 
+        # Nunca se registra el correo ni la contraseña: solo el motivo.
         if not self._institucion_id:
+            analytics.registrar(analytics.LOGIN_ERROR, {"motivo": "sin_institucion"})
             self._toast("Selecciona tu institución")
             return
         if not correo or not password:
+            analytics.registrar(analytics.LOGIN_ERROR, {"motivo": "campos_vacios"})
             self._toast("Completa correo y contraseña")
             return
 
         usuario = db.login(self._institucion_id, correo, password, self.rol_seleccionado)
         if usuario is None:
+            analytics.registrar(analytics.LOGIN_ERROR, {
+                "motivo": "credenciales_incorrectas", "rol": self.rol_seleccionado})
             self._toast("Credenciales incorrectas")
             return
 

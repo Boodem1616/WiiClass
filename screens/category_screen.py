@@ -48,6 +48,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.screen import MDScreen
 
+import analytics
 import db
 import theme
 from downloads_manager import descargar_grabacion, descargar_varias
@@ -311,17 +312,27 @@ class CategoryScreen(MDScreen):
         ids = list(self._seleccionadas)
         # Las que ya estaban descargadas no son una descarga nueva: no notifican.
         nuevas = {i for i in ids if not db.esta_descargada(i)}
+        analytics.registrar(analytics.DESCARGA_INICIADA,
+                            {"cantidad": len(nuevas), "modo": "multiple"})
 
         def _cada_una(grabacion_id):
             self._refrescar_lista()
             if grabacion_id in nuevas:
+                analytics.registrar(analytics.DESCARGA_COMPLETA,
+                                    {"grabacion_id": grabacion_id, "modo": "multiple"})
                 self._notificar_descarga(grabacion_id)
 
         def _completas():
             mostrar_aviso("Descarga terminada")
             self.salir_de_seleccion()
 
-        descargar_varias(app.usuario["id"], ids, on_cada_una=_cada_una, on_todas_completas=_completas)
+        def _fallo(g_id, exc):
+            analytics.registrar(analytics.DESCARGA_ERROR, {"grabacion_id": g_id})
+            mostrar_aviso("No se pudo descargar una de las clases")
+
+        descargar_varias(app.usuario["id"], ids, on_cada_una=_cada_una,
+                         on_todas_completas=_completas, on_error=_fallo,
+                         on_aviso=lambda _g, texto: mostrar_aviso(texto, duracion=4))
 
     # ---- Descarga individual --------------------------------------------
     def descargar_una(self, grabacion_id: int):
@@ -331,19 +342,42 @@ class CategoryScreen(MDScreen):
             return
 
         ya_descargada = db.esta_descargada(grabacion_id)
+        analytics.registrar(analytics.DESCARGA_INICIADA,
+                            {"grabacion_id": grabacion_id, "modo": "individual"})
 
         def _completa(g_id):
             self._refrescar_lista()
+            analytics.registrar(analytics.DESCARGA_COMPLETA,
+                                {"grabacion_id": g_id, "modo": "individual"})
             if not ya_descargada:
                 self._notificar_descarga(g_id)
 
         def _error(g_id, exc):
             # Antes un error de descarga no se mostraba: el ícono se quedaba
             # igual y el usuario no sabía si había fallado.
+            analytics.registrar(analytics.DESCARGA_ERROR, {"grabacion_id": g_id})
             mostrar_aviso("No se pudo descargar la clase")
 
         descargar_grabacion(app.usuario["id"], grabacion_id,
-                            on_completa=_completa, on_error=_error)
+                            on_completa=_completa, on_error=_error,
+                            on_progreso=self._progreso_por_hitos(),
+                            on_aviso=lambda _g, texto: mostrar_aviso(texto, duracion=4))
+
+    @staticmethod
+    def _progreso_por_hitos():
+        """Aviso "Descargando… N %" solo al cruzar 25/50/75 %. Solo ocurre con
+        audios remotos (la copia local de los de ejemplo es instantánea)."""
+        ultimo = [0]
+
+        def _progreso(_g, hechos, total):
+            if not total:
+                return
+            hito = (hechos * 100 // total) // 25 * 25
+            if 0 < hito < 100 and hito > ultimo[0]:
+                ultimo[0] = hito
+                mostrar_aviso(f"Descargando… {hito} %", duracion=1.2)
+
+        return _progreso
 
     @staticmethod
     def _notificar_descarga(grabacion_id: int):

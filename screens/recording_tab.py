@@ -28,6 +28,7 @@ from kivy.utils import platform
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.screen import MDScreen
 
+import analytics
 import db
 from notification_service import notificaciones
 from recorder import RecorderError, crear_grabadora
@@ -187,6 +188,8 @@ class RecordingTab(MDScreen):
         self.tiempo_txt = "00:00"
         self.estado_txt = "Grabando…"
         self.grabando = True
+        analytics.registrar(analytics.GRABACION_INICIADA,
+                            {"materia_id": self._materia_id, "semana": self._semana})
         self._reloj = Clock.schedule_interval(self._tick, 0.25)
 
     def _tick(self, dt):
@@ -229,6 +232,9 @@ class RecordingTab(MDScreen):
 
         self.ids.titulo.text = ""
         self._reiniciar_indicador()
+        analytics.registrar(analytics.GRABACION_GUARDADA, {
+            "grabacion_id": grabacion_id, "materia_id": self._materia_id,
+            "semana": self._semana, "duracion_seg": round(duracion)})
         mostrar_aviso("Grabación guardada")
         # Solo se llega aquí si la grabación terminó, se guardó en disco y se
         # registró en la base (los demás caminos hacen `return` antes).

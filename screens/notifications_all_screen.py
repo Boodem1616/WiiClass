@@ -19,6 +19,7 @@ from kivy.lang import Builder
 
 from kivymd.uix.screen import MDScreen
 
+import analytics
 import db
 from screens.notifications_state import notificaciones_state
 from screens.notification_widgets import construir_lista, confirmar_limpiar_todas
@@ -43,6 +44,7 @@ class NotificationsAllScreen(MDScreen):
         construir_lista(self.ids.lista, visibles, self._on_dismiss)
 
     def _on_dismiss(self, notificacion_id):
+        analytics.registrar(analytics.NOTIFICACION_DESCARTADA, {"origen": "todas"})
         notificaciones_state.ocultar(notificacion_id)
         self.refrescar()
 
@@ -55,6 +57,8 @@ class NotificationsAllScreen(MDScreen):
         todas_ids = [n["id"] for n in db.get_notificaciones(app.usuario["id"])]
 
         def _limpiar():
+            analytics.registrar(analytics.NOTIFICACIONES_LIMPIADAS,
+                                {"cantidad": len(todas_ids), "origen": "todas"})
             notificaciones_state.ocultar_todas(todas_ids)
             self.refrescar()
 

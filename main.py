@@ -29,6 +29,7 @@ from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 
+import analytics
 import db
 import storage
 import theme
@@ -105,12 +106,20 @@ class WiiClassApp(MDApp):
         # que se arregló arriba. La dirección se ajusta en cada llamada de
         # navegación (izquierda al avanzar, derecha al volver) más abajo.
         self.sm = MDScreenManager(transition=SlideTransition(duration=0.22))
-        self.sm.add_widget(LoginScreen(name="login"))
-        self.sm.add_widget(MainScreen(name="main"))
-        self.sm.add_widget(CategoryScreen(name="category_screen"))
-        self.sm.add_widget(PlayerScreen(name="player_screen"))
-        self.sm.add_widget(NotificationsAllScreen(name="notifications_all"))
-        self.sm.add_widget(RemoteConfigScreen(name="remote_config"))
+        analytics.nueva_sesion()
+        analytics.registrar(analytics.APP_INICIADA, {"plataforma": platform})
+        # Cada pantalla se enlaza al registro de analíticas ANTES de agregarse,
+        # para no perder el `on_enter` de la primera (Login).
+        for pantalla in (
+            LoginScreen(name="login"),
+            MainScreen(name="main"),
+            CategoryScreen(name="category_screen"),
+            PlayerScreen(name="player_screen"),
+            NotificationsAllScreen(name="notifications_all"),
+            RemoteConfigScreen(name="remote_config"),
+        ):
+            pantalla.bind(on_enter=self._on_pantalla_enter)
+            self.sm.add_widget(pantalla)
         self.sm.current = "login"
         self._iniciar_config_remota()
         # Si había una sesión guardada (sesion.json), se reanuda sin pasar
@@ -134,7 +143,38 @@ class WiiClassApp(MDApp):
     def _tick_config_remota(self, _dt):
         config_remota.actualizar()
 
+    # ---- Analíticas (Sesión 25) ---------------------------------------
+    # Un solo punto de medición de navegación: cada pantalla del
+    # ScreenManager dispara `on_enter` cuando YA es visible. Así no hay que
+    # repetir el registro en cada clase ni se cuenta dos veces.
+    _ultima_vista = None
+
+    def _on_pantalla_enter(self, pantalla):
+        nombre = pantalla.name
+        if nombre == "main":
+            # "main" contiene las pestañas: lo que el usuario ve es la pestaña.
+            nombre = self.sm.get_screen("main")._tab_actual
+        self._registrar_vista(nombre, forzar=True)
+
+    def registrar_tab_vista(self, nombre_tab: str):
+        """La llama MainScreen al cambiar de pestaña. Se ignora fuera de
+        "main" y si es la misma que ya se registró (p. ej. cuando la barra
+        se reconstruye al cambiar la red)."""
+        if self.sm.current == "main":
+            self._registrar_vista(nombre_tab)
+
+    def _registrar_vista(self, nombre: str, forzar: bool = False):
+        if not forzar and nombre == self._ultima_vista:
+            return
+        self._ultima_vista = nombre
+        analytics.registrar(analytics.PANTALLA_VISTA, {"nombre": nombre})
+
+    def on_stop(self):
+        analytics.registrar(analytics.APP_CERRADA)
+        analytics.vaciar()
+
     def on_pause(self):
+        analytics.vaciar()  # en Android la app puede morir estando en segundo plano
         return True  # Android: permite pausar sin cerrar y recibir on_resume
 
     def on_resume(self):
@@ -189,6 +229,10 @@ class WiiClassApp(MDApp):
 
     def on_login_success(self, usuario_id: int, restaurada: bool = False):
         self.usuario = db.get_usuario(usuario_id)
+        analytics.establecer_rol(self.usuario["rol"])
+        analytics.registrar(
+            analytics.SESION_RESTAURADA if restaurada else analytics.LOGIN_EXITOSO,
+            {"metodo": "sesion_guardada" if restaurada else "email"})
         storage.guardar_sesion(
             self.usuario["id"], self.usuario["correo"],
             self.usuario["rol"], self.usuario["institucion_id"],
@@ -247,6 +291,8 @@ class WiiClassApp(MDApp):
 
     def cerrar_sesion(self) -> bool:
         Clock.unschedule(self._chequear_conectividad)
+        analytics.registrar(analytics.LOGOUT)
+        analytics.establecer_rol(None)
         # Primero se borra la sesión guardada: cerrar sesión debe ser
         # definitivo aunque algo falle más abajo (la próxima apertura
         # mostrará el Login).
@@ -266,6 +312,8 @@ class WiiClassApp(MDApp):
     def abrir_categoria(self, categoria_id: int, nombre: str):
         cat_screen = self.sm.get_screen("category_screen")
         cat_screen.mostrar_categoria(categoria_id, nombre)
+        analytics.registrar(analytics.CATEGORIA_ABIERTA,
+                            {"categoria_id": categoria_id, "nombre": nombre})
         self._player_origen = "category_screen"
         self.sm.transition.direction = "left"
         self.sm.current = "category_screen"

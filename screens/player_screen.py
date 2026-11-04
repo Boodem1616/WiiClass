@@ -25,6 +25,7 @@ from kivy.factory import Factory
 
 from kivymd.uix.screen import MDScreen
 
+import analytics
 import db
 from audio_player import audio_engine
 from screens.widgets import mostrar_aviso
@@ -100,6 +101,10 @@ class PlayerScreen(MDScreen):
             (i for i, g in enumerate(self._lista_categoria) if g["id"] == grabacion_id), 0
         )
 
+        analytics.registrar(analytics.CLASE_ABIERTA, {
+            "grabacion_id": grabacion_id, "categoria_id": grab["categoria_id"],
+            "local": bool(local_path)})
+
         self.ids.titulo_clase.text = grab["nombre"]
         if categoria:
             grupo = categoria["grupo"] or ""
@@ -133,6 +138,10 @@ class PlayerScreen(MDScreen):
         for s, btn in self._speed_buttons.items():
             btn.active = (s == 1.0)
 
+        # El motor reproduce solo al terminar de cargar (autoplay).
+        analytics.registrar(analytics.REPRODUCCION_PLAY,
+                            {"grabacion_id": grabacion_id, "origen": "auto"})
+
         # load() es asíncrono: abre el archivo en un hilo de fondo y
         # reproduce automáticamente en cuanto esté listo (ver
         # audio_player.AudioEngine.load). Mientras tanto la UI muestra el
@@ -153,6 +162,11 @@ class PlayerScreen(MDScreen):
     def toggle_play(self):
         if audio_engine.is_loading:
             return
+        # Se registra la acción del usuario, según el estado previo.
+        analytics.registrar(
+            analytics.REPRODUCCION_PAUSA if audio_engine.is_playing else analytics.REPRODUCCION_PLAY,
+            {"grabacion_id": self.grabacion_actual["id"] if self.grabacion_actual else None,
+             "origen": "manual"})
         audio_engine.toggle_play_pause()
 
     def retroceder_10(self):
@@ -185,6 +199,7 @@ class PlayerScreen(MDScreen):
         self.cargar_grabacion(lista[indice]["id"])
 
     def set_speed(self, speed):
+        analytics.registrar(analytics.VELOCIDAD_CAMBIADA, {"velocidad": speed})
         audio_engine.set_speed(speed)
         for s, btn in self._speed_buttons.items():
             btn.active = (s == speed)

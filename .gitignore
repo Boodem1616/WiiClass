@@ -9,3 +9,5 @@ bin/
 .DS_Store
 grabaciones/
 datos/
+.pytest_cache/
+.venv/

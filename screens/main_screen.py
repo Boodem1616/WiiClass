@@ -176,6 +176,8 @@ class MainScreen(MDScreen):
         if nombre_tab:
             self._tab_actual = nombre_tab
             self.ids.content_manager.current = nombre_tab
+            from kivy.app import App
+            App.get_running_app().registrar_tab_vista(nombre_tab)
 
     def nombres_tabs(self):
         return set(self._tab_screens)

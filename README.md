@@ -117,4 +117,17 @@ Al iniciar sesión se elige el **Rol** (Estudiante / Profesor); la barra inferio
 - Usuarios demo: `sflores@uct.cl` (Estudiante) y `profesor@uct.cl` (Profesor), ambos con contraseña `12345678`.
 - BD: `Usuarios.rol` (CHECK Estudiante/Profesor), tabla `Profesor_Materia` (materias asignadas) y `Grabaciones.profesor_id`. Las bases antiguas se migran solas al abrir la app.
 - Grabación: `recorder.py` usa `sounddevice` + `wave` (.wav) en escritorio y `MediaRecorder` por pyjnius (.m4a/AAC) en Android. Se guarda en `grabaciones/<materia>/semana_<N>/`.
-- Android (buildozer.spec): `android.permissions = RECORD_AUDIO` y `requirements = python3,kivy,kivymd,ffpyplayer,pyjnius`.
+- Android: la configuración vive en [`buildozer.spec`](buildozer.spec) (permisos, dependencias, API).
+
+## Descargas a Documentos y generación del APK
+
+Las clases descargadas (por URL http/https o desde la maqueta local) se copian
+además a la carpeta **Documentos** del usuario (`Documentos/WiiClass/`) en
+Windows, macOS, Linux, Android e iOS, y el proyecto se empaqueta con
+**Buildozer**. Guía completa, pasos por plataforma, qué está verificado y qué
+no: [`DESCARGAS-DOCUMENTOS.md`](DESCARGAS-DOCUMENTOS.md).
+
+```bash
+python3 -m pytest -q tests     # pruebas (no requieren Kivy)
+buildozer android debug        # APK en bin/ (Linux/macOS/WSL2)
+```

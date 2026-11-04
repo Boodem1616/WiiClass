@@ -26,6 +26,7 @@ from kivy.properties import BooleanProperty
 
 from kivymd.uix.screen import MDScreen
 
+import analytics
 import db
 from screens.notifications_state import notificaciones_state
 from screens.notification_widgets import construir_lista, confirmar_limpiar_todas
@@ -69,6 +70,7 @@ class NotificationsTab(MDScreen):
         construir_lista(self.ids.lista, visibles[:MAX_VISIBLES], self._on_dismiss)
 
     def _on_dismiss(self, notificacion_id):
+        analytics.registrar(analytics.NOTIFICACION_DESCARTADA, {"origen": "tab"})
         notificaciones_state.ocultar(notificacion_id)
         self.refrescar()
 
@@ -81,6 +83,8 @@ class NotificationsTab(MDScreen):
         todas_ids = [n["id"] for n in db.get_notificaciones(app.usuario["id"])]
 
         def _limpiar():
+            analytics.registrar(analytics.NOTIFICACIONES_LIMPIADAS,
+                                {"cantidad": len(todas_ids), "origen": "tab"})
             notificaciones_state.ocultar_todas(todas_ids)
             self.refrescar()
 
