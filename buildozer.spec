@@ -15,11 +15,13 @@ version = 0.1.0
 # ---------------------------------------------------------------------------
 source.dir = .
 source.include_exts = py,kv,png,jpg,atlas,mp3,json
+# Entra al APK: main.py, wiiclass/ (código y .kv) y assets/audio.
 # No se empaqueta lo que se genera en tiempo de ejecución ni lo de desarrollo:
-# la BD y los JSON se crean al primer arranque (db.init_db / storage), y los
-# audios descargados/grabados viven en el almacenamiento del dispositivo.
-source.exclude_dirs = tests, bin, .buildozer, descargas, grabaciones, datos, remote, assets/screenshots, __pycache__, .git
-source.exclude_patterns = *.db, *.md, servir_*.py, analizador.py, scripts/*
+# la BD y los JSON se crean al primer arranque (db.init_db / storage), los
+# audios descargados/grabados viven en el almacenamiento del dispositivo, y
+# docs/, tools/, scripts/, config/ y tests/ son material de desarrollo.
+source.exclude_dirs = tests, bin, .buildozer, descargas, grabaciones, datos, docs, tools, scripts, config, assets/screenshots, __pycache__, .git
+source.exclude_patterns = *.db, *.md
 
 # ---------------------------------------------------------------------------
 # Dependencias (se compilan para Android con python-for-android)
@@ -64,7 +66,7 @@ android.accept_sdk_license = True
 android.private_storage = True
 
 # ---------------------------------------------------------------------------
-# iOS (solo desde macOS con Xcode; ver DESCARGAS-DOCUMENTOS.md)
+# iOS (solo desde macOS con Xcode; ver docs/technical/DESCARGAS-DOCUMENTOS.md)
 # ---------------------------------------------------------------------------
 # Ojo: Buildozer genera el proyecto de Xcode vía kivy-ios, pero NO tiene
 # opciones para el Info.plist. Las claves UIFileSharingEnabled y

@@ -7,8 +7,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import db
-import storage
+from wiiclass.data import db
+from wiiclass.data import storage
 
 
 class BaseTmp(unittest.TestCase):
@@ -227,6 +227,104 @@ class TestNotificaciones(BaseTmp):
         uid = self.estudiante_id()
         db.crear_notificacion(uid, "no debe fallar", "nueva_grabacion")  # no lanza
         self.assertTrue(any(n["mensaje"] == "no debe fallar" for n in db.get_notificaciones(uid)))
+
+
+def _cargar_estado():
+    """Carga notifications_state.py directo del archivo: el paquete
+    `wiiclass.ui.screens` importa Kivy y estas pruebas no lo necesitan."""
+    import importlib.util
+    ruta = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        "wiiclass", "ui", "screens", "notifications_state.py")
+    spec = importlib.util.spec_from_file_location("_notifications_state_test", ruta)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class TestNotificacionesOcultas(BaseTmp):
+    """Lo que el usuario elimina de Alertas sigue eliminado tras cerrar
+    sesión, volver a entrar o reiniciar la app."""
+
+    def setUp(self):
+        super().setUp()
+        db.init_db(seed=True)
+        self.mod = _cargar_estado()
+        self.uid = self.estudiante_id()
+        self.correo = "sflores@uct.cl"
+
+    def estado_nuevo(self):
+        """Simula reabrir la app (estado en memoria vacío)."""
+        e = self.mod.NotificacionesState()
+        e.activar(self.uid, self.correo)
+        return e
+
+    def ids(self, estado):
+        return {n["id"] for n in estado.filtrar_visibles(db.get_notificaciones(self.uid))}
+
+    def test_ocultar_una_sobrevive_a_cerrar_sesion_y_volver_a_entrar(self):
+        e = self.estado_nuevo()
+        todas = [n["id"] for n in db.get_notificaciones(self.uid)]
+        self.assertGreaterEqual(len(todas), 2)
+        e.ocultar(todas[0])
+        e.reiniciar()                       # cerrar sesión
+        e.activar(self.uid, self.correo)    # volver a iniciar
+        self.assertEqual(self.ids(e), set(todas) - {todas[0]})
+
+    def test_limpiar_todas_sobrevive_a_reabrir_la_app(self):
+        e = self.estado_nuevo()
+        e.ocultar_todas([n["id"] for n in db.get_notificaciones(self.uid)])
+        self.assertEqual(self.ids(self.estado_nuevo()), set())
+
+    def test_no_se_borra_de_la_base(self):
+        e = self.estado_nuevo()
+        n0 = len(db.get_notificaciones(self.uid))
+        e.ocultar_todas([n["id"] for n in db.get_notificaciones(self.uid)])
+        self.assertEqual(len(db.get_notificaciones(self.uid)), n0)
+
+    def test_notificacion_nueva_si_aparece(self):
+        e = self.estado_nuevo()
+        e.ocultar_todas([n["id"] for n in db.get_notificaciones(self.uid)])
+        db.crear_notificacion(self.uid, "clase nueva", "nueva_grabacion")
+        visibles = self.estado_nuevo().filtrar_visibles(db.get_notificaciones(self.uid))
+        self.assertEqual([n["mensaje"] for n in visibles], ["clase nueva"])
+
+    def test_cada_usuario_tiene_su_lista(self):
+        prof = self.profesor()
+        db.crear_notificacion(prof["id"], "para el profe", "nueva_grabacion")
+        e = self.estado_nuevo()
+        e.ocultar_todas([n["id"] for n in db.get_notificaciones(self.uid)])
+        ep = self.mod.NotificacionesState()
+        ep.activar(prof["id"], prof["correo"])
+        self.assertEqual([n["mensaje"] for n in ep.filtrar_visibles(db.get_notificaciones(prof["id"]))],
+                         ["para el profe"])
+        self.assertEqual(self.ids(self.estado_nuevo()), set())   # el del estudiante sigue intacto
+
+    def test_sigue_oculta_si_la_base_se_recrea(self):
+        """Los ids cambian al restaurar desde el JSON; la clave no."""
+        e = self.estado_nuevo()
+        todas = db.get_notificaciones(self.uid)
+        e.ocultar(todas[0]["id"])
+        mensaje = todas[0]["mensaje"]
+        self.borrar_base()
+        db.init_db(seed=True)               # recrea y restaura desde los JSON
+        self.uid = self.estudiante_id()
+        visibles = self.estado_nuevo().filtrar_visibles(db.get_notificaciones(self.uid))
+        self.assertNotIn(mensaje, [n["mensaje"] for n in visibles])
+        self.assertGreater(len(visibles), 0)
+
+    def test_sin_sesion_activa_no_hace_nada(self):
+        e = self.mod.NotificacionesState()
+        e.ocultar(1)                        # no lanza ni escribe
+        self.assertEqual(storage.cargar_notificaciones_ocultas(self.correo), [])
+
+    def test_archivo_corrupto_no_oculta_nada_ni_rompe(self):
+        os.makedirs(storage.carpeta_datos(), exist_ok=True)
+        with open(os.path.join(storage.carpeta_datos(), storage.ARCHIVO_NOTIFICACIONES_OCULTAS), "w") as f:
+            f.write("{no es json")
+        e = self.estado_nuevo()
+        self.assertEqual(len(self.ids(e)), len(db.get_notificaciones(self.uid)))
+        e.ocultar_todas([n["id"] for n in db.get_notificaciones(self.uid)])   # se recupera
+        self.assertEqual(self.ids(self.estado_nuevo()), set())
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import notification_service as ns
-from notification_service import NotificationService
+from wiiclass.services import notification_service as ns
+from wiiclass.services.notification_service import NotificationService
 
 
 class FakeBackend(ns._Backend):

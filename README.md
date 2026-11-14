@@ -1,133 +1,78 @@
 # WiiClass
 
-Maqueta funcional (Kivy + KivyMD 2.0) de una app móvil para grabar y
-descargar clases en audio, pensada para funcionar sobre el WiFi del
-campus incluso con mala conexión a internet fuera de él.
-
-> Documentación técnica extendida (decisiones de implementación, bugs
-> encontrados y su solución, notas de rendimiento): ver [`README2.md`](README2.md).
-> Fundamentación UX/UI (investigación con usuarios y trazabilidad
-> hallazgo → decisión de diseño): ver [`FUNDAMENTACION-UX-UI.md`](FUNDAMENTACION-UX-UI.md).
-
-## Problema que resuelve
-
-Muchos estudiantes no logran seguir el ritmo de una clase mientras
-también toman apuntes, y depender solo de la memoria o de apuntes
-ajenos para repasar es poco confiable. WiiClass permite grabar la
-clase, organizarla por asignatura/semana y volver a escucharla —
-incluyendo un modo **sin conexión**, para quienes no tienen datos
-móviles fuera del campus y solo pueden descargar el audio mientras
-están conectados al WiFi de la universidad.
-
-## Usuario objetivo
-
-Estudiantes de educación superior (el diagnóstico de este curso se
-levantó con estudiantes UC Temuco) que:
-- Comparten cursos organizados por categorías/asignatura y grupo.
-- Tienen acceso confiable a WiFi solo dentro del campus.
-- Necesitan repasar contenido grabado a distintas velocidades de
-  reproducción.
-
-## Capturas de pantalla
+App móvil (Kivy + KivyMD 2.0 + SQLite) para grabar y descargar clases en
+audio, pensada para el WiFi del campus y con modo **sin conexión** para
+repasar donde no hay datos móviles.
 
 | Login | Inicio | Categoría | Reproductor | Notificaciones |
 |---|---|---|---|---|
 | ![Login](assets/screenshots/01_login.png) | ![Inicio](assets/screenshots/02_home.png) | ![Categoría](assets/screenshots/03_categoria.png) | ![Reproductor](assets/screenshots/04_reproductor.png) | ![Notificaciones](assets/screenshots/05_notificaciones.png) |
 
-## Requisitos y ejecución
+## Problema y usuario
+
+Muchos estudiantes no alcanzan a seguir la clase y tomar apuntes a la vez.
+WiiClass permite grabarla, organizarla por asignatura/semana y volver a
+escucharla (a 0.5x–2x), también offline. El diagnóstico se levantó con
+estudiantes de UC Temuco; ver [`docs/ux/`](docs/ux/).
+
+## Ejecutar
 
 ```bash
 pip install -r requirements.txt
 python3 main.py
 ```
 
-La primera ejecución crea `wiiclass.db` (SQLite) con datos de ejemplo:
-- Institución: Universidad Central
-- Usuario demo: `sflores@uct.cl` / contraseña `12345678`
-
-> `ffpyplayer` habilita el control real de velocidad de reproducción
-> (0.5x/1.0x/1.5x/2.0x). Si no está disponible en el sistema, la app
-> hace *fallback* automático a `kivy.core.audio` sin cambio de
-> velocidad — no impide ejecutar la app.
-
-## Alcance técnico de esta entrega (E2)
-
-- Interfaz construida íntegramente en Kivy + KivyMD (sin Figma ni imágenes estáticas).
-- 5 pantallas navegables con `MDScreenManager` (Login, Principal con
-  bottom nav, Categoría, Reproductor, Notificaciones) + 4 tabs internos
-  (Inicio, Descargas, Alertas, Perfil) sincronizados con `MDNavigationBar`.
-- Separación interfaz/lógica: cada pantalla tiene su `.py` (lógica) y su
-  `.kv` (KV Language) del mismo nombre.
-- Componentes KivyMD con Material Design: `MDTopAppBar`, `MDButton`,
-  `MDCard`, `MDDialog`, `MDIcon`, `MDNavigationBar`, `MDDropdownMenu`.
-- Interacción funcional: login con validación de campos y credenciales,
-  reproducción con control de velocidad, descarga simulada a
-  almacenamiento local, selección múltiple con "mantener presionado",
-  notificaciones deslizables.
-- **Fuera de alcance** (no se exige en E2): persistencia real en
-  servidor, autenticación real, notificaciones push, configuración
-  remota.
-
-## Estructura del proyecto
-
-```
-main.py                 # Punto de entrada, navegación global
-db.py                   # Esquema SQLite + consultas (datos de ejemplo)
-audio_player.py         # Motor de audio (play/pause/seek/velocidad)
-downloads_manager.py    # Descarga (copia local) a almacenamiento offline
-requirements.txt
-assets/
-  audio/                # Audios de ejemplo
-  screenshots/           # Capturas usadas en este README
-screens/
-  login_screen.py/.kv
-  main_screen.py/.kv
-  home_tab.py/.kv
-  category_screen.py/.kv
-  player_screen.py/.kv
-  notifications_tab.py/.kv
-  notifications_all_screen.py/.kv
-  notification_widgets.py/.kv
-  notifications_state.py
-  profile_tab.py/.kv
-  downloads_tab.py/.kv
-```
-
-## Declaración de uso de IA
-
-Se usó IA (Claude, Anthropic) como asistente de desarrollo sobre el
-código ya existente del repositorio para: diagnosticar y corregir un
-bug de rendimiento (chequeo de conectividad bloqueando el hilo
-principal en el login, ver detalle en `README2.md`), y para redactar
-este README y el documento de fundamentación UX/UI. El diseño de la
-app, las decisiones de arquitectura (Kivy+KivyMD, ScreenManager,
-separación .py/.kv) y la implementación original de cada pantalla son
-del equipo.
-
-
-## Roles y módulo de Grabación
-
-Al iniciar sesión se elige el **Rol** (Estudiante / Profesor); la barra inferior cambia según el rol:
+La primera ejecución crea `wiiclass.db` con datos de ejemplo. Usuarios demo
+(contraseña `12345678`): `sflores@uct.cl` (Estudiante) y `profesor@uct.cl`
+(Profesor). Si `ffpyplayer` no está disponible, la app reproduce igual, sin
+cambio de velocidad.
 
 | Rol | Barra inferior |
 |---|---|
 | Estudiante | Inicio · Descargas (solo **sin** conexión) · Alertas · Perfil |
 | Profesor | Inicio · Descargas (solo **con** conexión) · **Grabación** · Alertas · Perfil |
 
-- Usuarios demo: `sflores@uct.cl` (Estudiante) y `profesor@uct.cl` (Profesor), ambos con contraseña `12345678`.
-- BD: `Usuarios.rol` (CHECK Estudiante/Profesor), tabla `Profesor_Materia` (materias asignadas) y `Grabaciones.profesor_id`. Las bases antiguas se migran solas al abrir la app.
-- Grabación: `recorder.py` usa `sounddevice` + `wave` (.wav) en escritorio y `MediaRecorder` por pyjnius (.m4a/AAC) en Android. Se guarda en `grabaciones/<materia>/semana_<N>/`.
-- Android: la configuración vive en [`buildozer.spec`](buildozer.spec) (permisos, dependencias, API).
+## Estructura
 
-## Descargas a Documentos y generación del APK
+```
+main.py                  Entrada (escritorio y Buildozer)
+buildozer.spec           Empaquetado Android (iOS comentado)
+requirements.txt
+wiiclass/
+  app.py                 Creación de la app, navegación y sesión
+  data/                  db.py (SQLite) · storage.py (JSON)
+  services/              analytics · audio_player · downloads_manager · documentos
+                         notification_service · recorder · remote_config
+  ui/                    theme.py · screens/ (*.py + *.kv, common.kv, widgets.py)
+assets/                  audio/ de ejemplo y screenshots/
+config/examples/         app_config.json de ejemplo (configuración remota)
+docs/                    ux/ · technical/ · project/
+scripts/                 ios_habilitar_archivos.py
+tools/                   analyze_analytics.py · dev_server/ (serve_config, serve_admin, admin.html)
+tests/
+```
 
-Las clases descargadas (por URL http/https o desde la maqueta local) se copian
-además a la carpeta **Documentos** del usuario (`Documentos/WiiClass/`) en
-Windows, macOS, Linux, Android e iOS, y el proyecto se empaqueta con
-**Buildozer**. Guía completa, pasos por plataforma, qué está verificado y qué
-no: [`DESCARGAS-DOCUMENTOS.md`](DESCARGAS-DOCUMENTOS.md).
+Dentro de `wiiclass/` los imports son absolutos (`from wiiclass.data import db`).
+En ejecución se crean en la raíz `wiiclass.db`, `datos/`, `descargas/` y
+`grabaciones/` (ignorados por git).
+
+## Pruebas, herramientas y Android
 
 ```bash
-python3 -m pytest -q tests     # pruebas (no requieren Kivy)
-buildozer android debug        # APK en bin/ (Linux/macOS/WSL2)
+python3 -m pytest -q tests                      # no requieren Kivy
+python3 tools/dev_server/serve_admin.py         # config remota + panel en :8765/admin.html
+python3 tools/analyze_analytics.py              # métricas de datos/analytics.json
+buildozer android debug                         # APK en bin/ (Linux/macOS/WSL2)
 ```
+
+## Documentación
+
+- [`docs/technical/IMPLEMENTACION.md`](docs/technical/IMPLEMENTACION.md): decisiones, bugs y rendimiento (incluye equivalencias con la estructura anterior).
+- Temas: [analíticas](docs/technical/ANALITICAS.md) · [configuración remota](docs/technical/CONFIG-REMOTA.md) · [descargas y APK](docs/technical/DESCARGAS-DOCUMENTOS.md) · [notificaciones](docs/technical/NOTIFICACIONES.md) · [persistencia](docs/technical/PERSISTENCIA.md).
+- UX/UI: [`docs/ux/`](docs/ux/). Revisiones y [uso de IA](docs/project/USO_IA.md): [`docs/project/`](docs/project/).
+
+## Declaración de uso de IA
+
+Se usó IA (Claude, Anthropic) como asistente de desarrollo y redacción. El
+diseño, la arquitectura y la implementación original son del equipo. Detalle
+completo en [`docs/project/USO_IA.md`](docs/project/USO_IA.md).

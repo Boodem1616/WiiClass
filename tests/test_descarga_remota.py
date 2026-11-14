@@ -12,9 +12,9 @@ from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import db
-import documentos
-import downloads_manager as dm
+from wiiclass.data import db
+from wiiclass.services import documentos
+from wiiclass.services import downloads_manager as dm
 
 AUDIO = (b"ID3" + bytes(range(256))) * 1200          # ~307 KB
 

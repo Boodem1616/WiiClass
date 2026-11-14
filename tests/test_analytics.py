@@ -5,10 +5,12 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)
+sys.path.insert(0, os.path.join(RAIZ, "tools"))
 
-import analytics as A
-import analizador as Z
+from wiiclass.services import analytics as A
+import analyze_analytics as Z
 
 
 class BaseAnalytics(unittest.TestCase):

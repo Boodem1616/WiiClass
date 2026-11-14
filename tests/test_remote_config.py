@@ -9,8 +9,8 @@ from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import remote_config as rc
-from remote_config import DEFAULTS, RemoteConfig, normalizar
+from wiiclass.services import remote_config as rc
+from wiiclass.services.remote_config import DEFAULTS, RemoteConfig, normalizar
 
 
 def fuente(texto, etag=None):
@@ -178,7 +178,7 @@ class Servicio(unittest.TestCase):
 
 class InterruptorNotificaciones(unittest.TestCase):
     def test_desactivadas_remotamente_no_se_envian(self):
-        from notification_service import NotificationService, _Backend
+        from wiiclass.services.notification_service import NotificationService, _Backend
 
         class B(_Backend):
             enviados = []
@@ -196,7 +196,7 @@ class CachePersistente(unittest.TestCase):
     """La config recibida sobrevive a un reinicio y se usa sin red."""
 
     def test_reinicio_sin_red_usa_cache_de_disco(self):
-        import storage
+        from wiiclass.data import storage
         with tempfile.TemporaryDirectory() as d:
             os.environ["WIICLASS_DATA_DIR"] = d
             try:
@@ -220,14 +220,15 @@ class RedReal(unittest.TestCase):
     """Servidor HTTP real en localhost + esquema file://."""
 
     def test_http_etag_y_limite(self):
-        import servir_config
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools", "dev_server"))
+        import serve_config
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "c.json"), "w") as f:
                 json.dump({"version": 11, "anuncio": {"activo": True, "mensaje": "hola"}}, f)
             with open(os.path.join(d, "grande.json"), "w") as f:
                 f.write(" " * (rc.MAX_BYTES + 10))
             import functools
-            srv = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(servir_config.Handler, directory=d))
+            srv = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(serve_config.Handler, directory=d))
             threading.Thread(target=srv.serve_forever, daemon=True).start()
             try:
                 base = f"http://127.0.0.1:{srv.server_port}"

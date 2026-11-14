@@ -1,0 +1,54 @@
+#:import T wiiclass.ui.theme
+
+# Contenido visual de una notificación. Sin borde: sobre el fondo "papel"
+# una tarjeta blanca se distingue bien; las NO leídas van teñidas de azul.
+<NotificationRow@MDCard>:
+    mensaje: ""
+    tipo: "nueva_grabacion"
+    fecha_txt: ""
+    leida: False
+    orientation: "horizontal"
+    padding: dp(12)
+    spacing: dp(12)
+    radius: [dp(16), dp(16), dp(16), dp(16)]
+    style: "filled"
+    theme_bg_color: "Custom"
+    md_bg_color: T.SURFACE if root.leida else T.MIST
+
+    # Ficha circular: verde para descargas, azul para grabaciones nuevas.
+    AnchorLayout:
+        size_hint: None, None
+        size: dp(44), dp(44)
+        pos_hint: {"center_y": 0.5}
+        canvas.before:
+            Color:
+                rgba: T.SUCCESS_SOFT if root.tipo == "descarga_completada" else T.SURFACE
+            Ellipse:
+                pos: self.pos
+                size: self.size
+
+        MDIcon:
+            icon: "check" if root.tipo == "descarga_completada" else "microphone"
+            size_hint: None, None
+            size: dp(24), dp(24)
+            halign: "center"
+            valign: "middle"
+            theme_text_color: "Custom"
+            text_color: T.SUCCESS if root.tipo == "descarga_completada" else T.PRIMARY
+            font_size: "22sp"
+
+    BoxLayout:
+        orientation: "vertical"
+
+        TextoTitulo:
+            text: "Descarga completada" if root.tipo == "descarga_completada" else "Nueva grabación disponible"
+
+        TextoSuave:
+            text: root.mensaje
+            shorten: True
+
+    TextoSuave:
+        text: root.fecha_txt
+        size_hint_x: None
+        width: dp(78)
+        halign: "right"
