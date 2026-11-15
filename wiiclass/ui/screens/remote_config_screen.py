@@ -9,6 +9,8 @@ Se llega desde Perfil. Muestra:
   - Avisos de validación: valores recibidos que se descartaron.
   - Botón "Actualizar ahora": descarga de nuevo y la pantalla se redibuja
     sola cuando termina (el resto de la app también, ver app.py).
+  - Además la app consulta el JSON sola en cada cambio de pantalla/pestaña
+    (`WiiClassApp.recargar_config_remota`); esas consultas son silenciosas.
 """
 
 import os
@@ -102,6 +104,10 @@ def _crear_fila(etiqueta, valor):
 
 class RemoteConfigScreen(MDScreen):
     actualizando = BooleanProperty(False)
+    # True solo cuando el usuario pidió la actualización con el botón. Las
+    # consultas automáticas (cambio de pantalla, temporizador, on_resume) se
+    # hacen en silencio: sin este filtro saldría un aviso en cada navegación.
+    _manual = False
 
     def on_pre_enter(self, *args):
         self.refrescar()
@@ -118,15 +124,18 @@ class RemoteConfigScreen(MDScreen):
             contenedor.add_widget(_crear_fila(etiqueta, valor))
 
     def actualizar_ahora(self):
-        if not config_remota.actualizar():
-            mostrar_aviso("Ya se está actualizando")
-            return
+        self._manual = True
+        # Si ya había una consulta en curso (p. ej. la que se lanzó al entrar
+        # a esta pantalla), no se duplica: se espera su resultado y se avisa
+        # al terminar, igual que si la hubiera iniciado el botón.
+        config_remota.actualizar()
         self.actualizando = True
 
     def al_terminar(self, cambio: bool):
         """Lo llama app.py cuando termina un intento de actualización."""
-        self.refrescar()
-        if self.manager and self.manager.current == self.name:
+        self.refrescar()  # la pantalla siempre se redibuja con los datos nuevos
+        manual, self._manual = self._manual, False
+        if manual and self.manager and self.manager.current == self.name:
             error = config_remota.estado["error"]
             if error:
                 mostrar_aviso("No se pudo actualizar; se mantiene la última", duracion=3)

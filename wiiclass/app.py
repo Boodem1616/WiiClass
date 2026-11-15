@@ -17,10 +17,10 @@ from kivy.utils import platform
 
 # Limita el framerate global SOLO en escritorio: reduce el costo de cualquier
 # redibujo continuo en equipos sin aceleración de GPU (la causa más común de
-# que la app se sienta "congelada"). En Android sí hay GPU y limitar a 30 fps
+# que la app se sienta "congelada"). En Android sí hay GPU y limitar a 45 fps
 # haría que el scroll y las transiciones se vean entrecortados.
 if platform != "android":
-    Config.set("graphics", "maxfps", "30")
+    Config.set("graphics", "maxfps", "45")
 
 import threading
 
@@ -140,6 +140,28 @@ class WiiClassApp(MDApp):
 
     def _tick_config_remota(self, _dt):
         config_remota.actualizar()
+
+    def recargar_config_remota(self):
+        """Consulta el JSON remoto ahora mismo, sin bloquear la interfaz.
+
+        Se llama cada vez que el usuario llega a la pantalla de Inicio
+        (`MainScreen`: al volver desde otra pantalla o al tocar la pestaña
+        Inicio), así ve los datos nuevos sin hacer nada más.
+
+        Es barata y segura de llamar seguido: corre en un hilo, si ya hay una
+        consulta en curso se ignora (no se apilan) y, si la fuente envía ETag,
+        sin cambios responde 304. Al terminar, `_on_config_remota` redibuja
+        la pestaña visible solo si los valores cambiaron.
+        """
+        # Durante build(), al agregar la primera pantalla Kivy ya dispara su
+        # on_pre_enter, cuando todavía no existen todas. Se ignora: la consulta
+        # inicial la hace `_iniciar_config_remota` al final de build().
+        if not self.sm.has_screen("remote_config"):
+            return
+        if config_remota.actualizar():
+            # Si el usuario está viendo la pantalla de estado, que muestre el
+            # ícono de "actualizando" mientras dura la consulta.
+            self.sm.get_screen("remote_config").actualizando = True
 
     # ---- Analíticas (Sesión 25) ---------------------------------------
     # Un solo punto de medición de navegación: cada pantalla del

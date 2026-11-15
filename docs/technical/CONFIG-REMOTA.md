@@ -1,13 +1,13 @@
 # Configuración remota
 
 La app lee un JSON desde una URL y aplica sus valores sin publicar una versión nueva.
-Código: `wiiclass/services/remote_config.py` (sin Kivy). Pantalla de estado: **Perfil → Configuración remota**.
+Código: `wiiclass/services/remote_config.py` (sin Kivy). Pantalla de estado: `remote_config_screen.py` (sin botón de acceso en Perfil).
 
 ## Probarlo en 3 pasos
 ```bash
 python3 tools/dev_server/serve_config.py   # 1. sirve config/examples/ en http://127.0.0.1:8765/app_config.json
 python3 main.py                 # 2. abre la app (login demo: sflores@uct.cl / 12345678)
-# 3. edita config/examples/app_config.json y toca "Actualizar ahora" en Perfil → Configuración remota
+# 3. edita config/examples/app_config.json y vuelve a la pantalla de Inicio
 ```
 Otra fuente: `WIICLASS_REMOTE_CONFIG_URL=https://tu-servidor/app_config.json python3 main.py`
 (emulador Android: `http://10.0.2.2:8765/...`; teléfono real: la IP de tu PC. En Android agrega
@@ -28,8 +28,10 @@ Otra fuente: `WIICLASS_REMOTE_CONFIG_URL=https://tu-servidor/app_config.json pyt
 Ejemplo completo: `config/examples/app_config.json`.
 
 ## Cuándo se consulta
-Al abrir la app, al volver del segundo plano (`on_resume`) y cada `intervalo_actualizacion_seg`
-segundos. Si hubo cambios, la pestaña visible se redibuja sola.
+Al abrir la app, al volver del segundo plano (`on_resume`), cada `intervalo_actualizacion_seg` segundos y
+**cada vez que el usuario llega a la pantalla de Inicio** (`WiiClassApp.recargar_config_remota`, llamada desde
+`MainScreen`). Si hubo cambios, Inicio se redibuja sola. Si ya hay una consulta en curso, otra no se apila.
+El botón "Configuración remota" ya no está en Perfil (la pantalla sigue en el código, sin acceso desde la UI).
 
 ## Cómo se comporta
 * **Arranque instantáneo**: la app nunca espera a la red. Usa la última config guardada (`datos/config_remota.json`)

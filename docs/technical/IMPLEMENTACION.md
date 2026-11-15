@@ -270,7 +270,7 @@ ambigua o tenía una inconsistencia):
   software: común en máquinas virtuales, ciertas configuraciones de
   Windows sin drivers OpenGL correctos, algunos emuladores). Eso satura
   el hilo principal de Kivy y la app se percibe "congelada". Por eso la
-  animación se reimplementa con pasos discretos (`PASOS_POR_SEGUNDO = 6`
+  animación se reimplementa con pasos discretos (`PASOS_POR_SEGUNDO = 45`
   en `ui/screens/login_screen.py`), lo que baja el consumo a ~17-21% CPU en
   el mismo escenario. Además, la animación solo corre mientras la
   pantalla de Login está visible (se detiene con `on_leave`). Si en un

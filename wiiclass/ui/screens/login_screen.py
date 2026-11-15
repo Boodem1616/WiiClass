@@ -224,8 +224,9 @@ class LoginScreen(MDScreen):
     # (varias veces por segundo en vez de 30-60). Sigue viéndose como
     # "flotando hacia arriba", pero el canvas solo se invalida esa pocas
     # veces por segundo en lugar de continuamente.
-    PASOS_POR_SEGUNDO = 6          # a más alto, más fluido pero más CPU
-    ALTO_POR_PASO = dp(10)
+    PASOS_POR_SEGUNDO = 45         # a más alto, más fluido pero más CPU
+    VELOCIDAD_DP_POR_SEG = 60      # velocidad de subida (no depende de los pasos)
+    ALTO_POR_PASO = dp(VELOCIDAD_DP_POR_SEG) / PASOS_POR_SEGUNDO
 
     def _spawn_notebooks(self, dt):
         layer = self.ids.notebook_layer

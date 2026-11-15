@@ -76,6 +76,11 @@ class MainScreen(MDScreen):
         # hecha en Categoría no aparecía en "Descargas" hasta cambiar de
         # pestaña y volver.
         self._refrescar_tab(self._tab_actual)
+        # Volver a Inicio desde Categoría, Reproductor, Alertas, etc. también
+        # recarga el JSON remoto.
+        if self._tab_actual == "home_tab":
+            from kivy.app import App
+            App.get_running_app().recargar_config_remota()
 
     def _refrescar_tab(self, nombre_tab):
         tab = self._tab_screens.get(nombre_tab)
@@ -177,7 +182,12 @@ class MainScreen(MDScreen):
             self._tab_actual = nombre_tab
             self.ids.content_manager.current = nombre_tab
             from kivy.app import App
-            App.get_running_app().registrar_tab_vista(nombre_tab)
+            app = App.get_running_app()
+            app.registrar_tab_vista(nombre_tab)
+            if nombre_tab == "home_tab":
+                # Al llegar a Inicio se recarga el JSON remoto (Inicio se
+                # redibuja solo si hubo cambios).
+                app.recargar_config_remota()
 
     def nombres_tabs(self):
         return set(self._tab_screens)
