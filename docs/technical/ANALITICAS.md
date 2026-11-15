@@ -27,4 +27,6 @@ contraseñas ni nombres de personas.
 ## Métricas vs KPIs (método MJV)
 Métricas: pantallas más visitadas, eventos por tipo, duración promedio de sesión.
 KPIs: % login exitoso, % clases abiertas que se reproducen, % descargas exitosas.
-Embudo: sesión iniciada → categoría → clase → reproducción (alerta si la caída es ≥ 80 %).
+Una clase cuenta como "reproducida" solo si la persona tocó play (`reproduccion_play` con
+`origen: manual`); el play `auto` que la app genera al abrir la clase no se cuenta.
+Embudo: sesión iniciada → categoría → clase → reproducción manual (alerta si la caída es ≥ 80 %).

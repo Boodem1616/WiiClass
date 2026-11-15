@@ -128,7 +128,7 @@ class TestAnalizador(BaseAnalytics):
     def test_kpis(self):
         evs = [ev("login_exitoso", 1), ev("login_error", 2), ev("login_error", 3), ev("login_error", 4),
                ev("clase_abierta", 5, grabacion_id=1), ev("clase_abierta", 6, grabacion_id=2),
-               ev("reproduccion_play", 7, grabacion_id=1),
+               ev("reproduccion_play", 7, grabacion_id=1, origen="manual"),
                ev("descarga_completa", 8), ev("descarga_error", 9)]
         k = Z.kpis(evs)
         self.assertAlmostEqual(k["tasa_login_exitoso"], 0.25)
@@ -136,10 +136,19 @@ class TestAnalizador(BaseAnalytics):
         self.assertAlmostEqual(k["tasa_descarga_exitosa"], 0.5)
         self.assertIsNone(Z.kpis([])["tasa_login_exitoso"])
 
+    def test_kpi_ignora_reproduccion_automatica(self):
+        # El play "auto" lo genera la app al abrir la clase: no debe contar.
+        evs = [ev("clase_abierta", 1, grabacion_id=1), ev("reproduccion_play", 2, grabacion_id=1, origen="auto"),
+               ev("clase_abierta", 3, grabacion_id=2), ev("reproduccion_play", 4, grabacion_id=2, origen="auto"),
+               ev("reproduccion_play", 5, grabacion_id=2, origen="manual")]
+        k = Z.kpis(evs)
+        self.assertAlmostEqual(k["tasa_clases_reproducidas"], 0.5)
+        self.assertEqual(k["clases_distintas_escuchadas"], 1)
+
     def test_embudo_en_orden(self):
         evs = [
             ev("login_exitoso", 1, "a"), ev("categoria_abierta", 2, "a"), ev("clase_abierta", 3, "a"),
-            ev("reproduccion_play", 4, "a"),
+            ev("reproduccion_play", 4, "a", origen="manual"),
             ev("sesion_restaurada", 1, "b"), ev("categoria_abierta", 2, "b"),
             ev("categoria_abierta", 1, "c"),  # sin login previo: no cuenta
             ev("clase_abierta", 1, "d"), ev("login_exitoso", 2, "d"),  # fuera de orden
@@ -147,6 +156,15 @@ class TestAnalizador(BaseAnalytics):
         f = Z.embudo(evs)
         self.assertEqual([x["sesiones"] for x in f], [3, 2, 1, 1])
         self.assertAlmostEqual(f[1]["vs_anterior"], 2 / 3)
+
+    def test_embudo_ignora_reproduccion_automatica(self):
+        evs = [ev("login_exitoso", 1, "a"), ev("categoria_abierta", 2, "a"), ev("clase_abierta", 3, "a"),
+               ev("reproduccion_play", 4, "a", origen="auto"),
+               ev("login_exitoso", 1, "b"), ev("categoria_abierta", 2, "b"), ev("clase_abierta", 3, "b"),
+               ev("reproduccion_play", 4, "b", origen="auto"), ev("reproduccion_play", 5, "b", origen="manual")]
+        f = Z.embudo(evs)
+        self.assertEqual([x["sesiones"] for x in f], [2, 2, 2, 1])
+        self.assertIn("Reproduce la clase", Z.reporte(evs))
 
     def test_reporte(self):
         self.assertIn("No hay eventos", Z.reporte([]))

@@ -27,9 +27,15 @@ EMBUDO_ESTUDIANTE = [
     ("Sesión iniciada", (A.LOGIN_EXITOSO, A.SESION_RESTAURADA)),
     ("Abre una categoría", (A.CATEGORIA_ABIERTA,)),
     ("Abre una clase", (A.CLASE_ABIERTA,)),
-    ("Reproduce la clase", (A.REPRODUCCION_PLAY,)),
+    # Solo play iniciado por la persona (el "auto" lo genera la app al abrir).
+    ("Reproduce la clase", (A.REPRODUCCION_PLAY,), lambda e: _es_manual(e)),
 ]
 UMBRAL_CAIDA_ALERTA = 0.80  # una caída >= 80% entre pasos indica un problema
+
+
+def _es_manual(e) -> bool:
+    """True si la reproducción la inició la persona (no el autoplay de la app)."""
+    return (e.get("datos") or {}).get("origen") == "manual"
 
 
 # ---------------------------------------------------------------------------
@@ -110,8 +116,11 @@ def _tasa(parte, total):
 def kpis(eventos) -> dict:
     c = contar_eventos(eventos)
     intentos = c[A.LOGIN_EXITOSO] + c[A.LOGIN_ERROR]
+    # Solo reproducciones iniciadas por la persona: el play "auto" lo genera
+    # la app al abrir la clase y haría que casi toda clase abierta cuente.
     clases_escuchadas = {(e.get("datos") or {}).get("grabacion_id")
-                         for e in eventos if e["evento"] == A.REPRODUCCION_PLAY}
+                         for e in eventos
+                         if e["evento"] == A.REPRODUCCION_PLAY and _es_manual(e)}
     clases_escuchadas.discard(None)
     clases_abiertas = {(e.get("datos") or {}).get("grabacion_id")
                        for e in eventos if e["evento"] == A.CLASE_ABIERTA}
@@ -132,6 +141,8 @@ def kpis(eventos) -> dict:
 def embudo(eventos, pasos=EMBUDO_ESTUDIANTE) -> list:
     """Cuenta en cuántas sesiones se llegó a cada paso, EN ORDEN.
 
+    Cada paso es (nombre, eventos) o (nombre, eventos, filtro); el filtro,
+    si existe, recibe el evento y debe devolver True para que cuente.
     Devuelve [{"paso", "sesiones", "vs_anterior", "caida"}...]; `caida` es
     la fracción de sesiones perdidas respecto del paso anterior.
     """
@@ -139,11 +150,13 @@ def embudo(eventos, pasos=EMBUDO_ESTUDIANTE) -> list:
     for evs in agrupar_sesiones(eventos).values():
         k = 0
         for e in evs:
-            if k < len(pasos) and e["evento"] in pasos[k][1]:
+            if k < len(pasos) and e["evento"] in pasos[k][1] and (
+                    len(pasos[k]) < 3 or pasos[k][2](e)):
                 alcanzados[k] += 1
                 k += 1
     filas = []
-    for i, (nombre, _evs) in enumerate(pasos):
+    for i, paso in enumerate(pasos):
+        nombre = paso[0]
         previo = alcanzados[i - 1] if i else None
         vs = _tasa(alcanzados[i], previo) if i else None
         filas.append({

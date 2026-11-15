@@ -48,8 +48,8 @@ Definidos en `kpis()` con el comentario "alineados al éxito del proyecto"
 | KPI | Fórmula (según el código) | Qué indica |
 |---|---|---|
 | **Tasa de login exitoso** | `login_exitoso / (login_exitoso + login_error)` | Si el acceso funciona o se vuelve una barrera |
-| **Clases abiertas que se reproducen** | clases distintas con `reproduccion_play` ∩ clases distintas con `clase_abierta`, dividido por las clases distintas abiertas | Si quien entra a una clase efectivamente la escucha |
-| **Clases distintas escuchadas** | cantidad de `grabacion_id` distintos en `reproduccion_play` | Amplitud del uso del contenido |
+| **Clases abiertas que se reproducen** | clases distintas con `reproduccion_play` **manual** (`origen: manual`) ∩ clases distintas con `clase_abierta`, dividido por las clases distintas abiertas | Si quien entra a una clase toca play. No se cuenta el play `auto` que genera la app al abrirla |
+| **Clases distintas escuchadas** | cantidad de `grabacion_id` distintos en `reproduccion_play` manual | Amplitud del uso del contenido |
 | **Tasa de descarga exitosa** | `descarga_completa / (descarga_completa + descarga_error)` | Si el uso sin conexión es confiable |
 | **Grabaciones guardadas** | conteo de `grabacion_guardada` | Uso de la función del Profesor |
 
@@ -76,7 +76,7 @@ paso, **en orden** **[código]**:
 1. Sesión iniciada (`login_exitoso` o `sesion_restaurada`)
 2. Abre una categoría (`categoria_abierta`)
 3. Abre una clase (`clase_abierta`)
-4. Reproduce la clase (`reproduccion_play`)
+4. Reproduce la clase (`reproduccion_play` con `origen: manual`; el play automático no cuenta)
 
 El reporte marca una alerta si entre dos pasos se pierde **80 % o más** de las
 sesiones (`UMBRAL_CAIDA_ALERTA = 0.80`). Es el único umbral definido en el
@@ -232,6 +232,10 @@ categoría. **No debe leerse como un hallazgo de usabilidad.**
   primer y el último evento, no el tiempo de atención real.
 - **Clases reproducidas** se calcula sobre el conjunto de clases distintas de
   todo el archivo, no por persona.
+- **Solo cuenta el play manual.** La app inicia la reproducción sola al abrir una
+  clase (`origen: auto`) y ese evento se excluye del KPI y del embudo. Quien
+  escucha la clase completa sin tocar nada tampoco queda contado, y no hay un
+  evento de progreso o finalización que mida cuánto se escuchó realmente.
 - **Datos locales y por dispositivo:** nada se centraliza solo; el tope de 5 000
   eventos descarta los más antiguos en usos prolongados.
 - **Sin metas definidas** (salvo el 80 % del embudo): sin un umbral por KPI no
