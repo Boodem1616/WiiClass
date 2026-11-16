@@ -51,7 +51,12 @@ from kivymd.uix.screen import MDScreen
 from wiiclass.services import analytics
 from wiiclass.data import db
 from wiiclass.ui import theme
-from wiiclass.services.downloads_manager import descargar_grabacion, descargar_varias
+from wiiclass.services.downloads_manager import (
+    MSG_DESCARGA_ERROR,
+    MSG_DESCARGA_OK,
+    descargar_grabacion,
+    descargar_varias,
+)
 from wiiclass.services.remote_config import config_remota
 from wiiclass.services.notification_service import notificaciones
 from wiiclass.ui.screens.widgets import mostrar_aviso
@@ -323,16 +328,18 @@ class CategoryScreen(MDScreen):
                 self._notificar_descarga(grabacion_id)
 
         def _completas():
-            mostrar_aviso("Descarga terminada")
+            mostrar_aviso(MSG_DESCARGA_OK)
             self.salir_de_seleccion()
 
         def _fallo(g_id, exc):
             analytics.registrar(analytics.DESCARGA_ERROR, {"grabacion_id": g_id})
-            mostrar_aviso("No se pudo descargar una de las clases")
+            mostrar_aviso(MSG_DESCARGA_ERROR)
 
         descargar_varias(app.usuario["id"], ids, on_cada_una=_cada_una,
                          on_todas_completas=_completas, on_error=_fallo,
-                         on_aviso=lambda _g, texto: mostrar_aviso(texto, duracion=4))
+                         on_aviso=lambda _g, texto: (
+                             None if texto == MSG_DESCARGA_OK
+                             else mostrar_aviso(texto, duracion=4)))
 
     # ---- Descarga individual --------------------------------------------
     def descargar_una(self, grabacion_id: int):
@@ -356,7 +363,7 @@ class CategoryScreen(MDScreen):
             # Antes un error de descarga no se mostraba: el ícono se quedaba
             # igual y el usuario no sabía si había fallado.
             analytics.registrar(analytics.DESCARGA_ERROR, {"grabacion_id": g_id})
-            mostrar_aviso("No se pudo descargar la clase")
+            mostrar_aviso(MSG_DESCARGA_ERROR)
 
         descargar_grabacion(app.usuario["id"], grabacion_id,
                             on_completa=_completa, on_error=_error,

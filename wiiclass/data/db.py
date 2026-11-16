@@ -169,7 +169,7 @@ def _seed_profesor_demo(conn):
     cur = conn.execute(
         """INSERT INTO Usuarios (nombre, correo, password_hash, fecha_nac, institucion_id, rol)
            VALUES (?, ?, ?, ?, ?, 'Profesor')""",
-        ("Carolina Rojas", "profesor@uct.cl", _fake_hash("12345678"), "1985-03-22", inst["id"]),
+        ("Profesor Demo", "profesor@uct.cl", _fake_hash("12345678"), "1985-06-07", inst["id"]),
     )
     prof_id = cur.lastrowid
     for cat in conn.execute("SELECT id FROM Categorias ORDER BY id LIMIT 2").fetchall():
@@ -181,14 +181,14 @@ def _seed_profesor_demo(conn):
 
 
 def _seed_demo_data(conn):
-    conn.execute("INSERT INTO Instituciones (nombre) VALUES ('Universidad Central')")
+    conn.execute("INSERT INTO Instituciones (nombre) VALUES ('Universidad Catolica de Temuco')")
     conn.execute("INSERT INTO Instituciones (nombre) VALUES ('Universidad del Sur')")
     conn.commit()
 
     conn.execute(
         """INSERT INTO Usuarios (nombre, correo, password_hash, fecha_nac, institucion_id, foto_path)
            VALUES (?, ?, ?, ?, ?, ?)""",
-        ("Sebastián Flores", "sflores@uct.cl", _fake_hash("12345678"),
+        ("Estudiante Demo", "estudiante@alu.uct.cl", _fake_hash("12345678"),
          "2003-07-16", 1, None),
     )
     conn.commit()
@@ -273,13 +273,15 @@ def get_instituciones():
 
 
 def login(institucion_id: int, correo: str, password: str, rol: str = "Estudiante"):
+    
     """Devuelve la fila del usuario si las credenciales son correctas, si no None.
 
-    El correo se compara sin distinguir mayúsculas: "SFlores@uct.cl" y
-    "sflores@uct.cl" son la misma cuenta (antes fallaba con "Credenciales
+    El correo se compara sin distinguir mayúsculas: "usuario@alu.uct.cl" y
+    "USUARIO@ALU.UCT.CL" son la misma cuenta (antes fallaba con "Credenciales
     incorrectas" si el teclado del teléfono ponía la primera letra en
     mayúscula).
     """
+
     conn = get_connection()
     row = conn.execute(
         """SELECT * FROM Usuarios

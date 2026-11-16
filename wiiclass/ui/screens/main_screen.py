@@ -4,7 +4,7 @@ main_screen.py — PANTALLA 2: PRINCIPAL (Post-Login)
 Bottom Navigation Bar con animación fluida al cambiar de tab.
 La barra depende del ROL (ver `tabs_para_rol`):
   - Estudiante: Inicio | [Descargas, solo SIN conexión] | Alertas | Perfil
-  - Profesor:   Inicio | [Descargas, solo CON conexión] | Grabación | Alertas | Perfil
+  - Profesor:   Inicio | [Descargas, solo SIN conexión] | Grabación | Alertas | Perfil
     (el orden sigue el mock de Figma: Descargas va justo después de Inicio)
 
 En KivyMD 2.0.0 el antiguo MDBottomNavigation fue reemplazado por
@@ -37,12 +37,11 @@ def tabs_para_rol(rol: str, offline: bool):
     """
     tabs = [("home_tab", "Inicio", "home")]
     descargas = ("downloads_tab", "Descargas", "cloud-download-outline")
-    if rol == "Profesor":
-        if not offline:
-            tabs.append(descargas)
-        tabs.append(("recording_tab", "Grabación", "microphone-outline"))
-    elif offline:
+    # Descargas solo aparece SIN conexión, para todos los roles.
+    if offline:
         tabs.append(descargas)
+    if rol == "Profesor":
+        tabs.append(("recording_tab", "Grabación", "microphone-outline"))
     tabs.append(("notifications_tab", "Alertas", "bell-outline"))
     tabs.append(("profile_tab", "Perfil", "account-outline"))
     return tabs

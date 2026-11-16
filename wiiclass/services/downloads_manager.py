@@ -24,7 +24,7 @@ Callbacks (todos opcionales salvo que se indique):
     on_completa(grabacion_id)
     on_error(grabacion_id, exc)
     on_progreso(grabacion_id, bytes_hechos, bytes_totales | None)   # solo URL
-    on_aviso(grabacion_id, texto)   # info o problema no fatal (p. ej. Documentos)
+    on_aviso(grabacion_id, texto)   # MSG_DESCARGA_OK, o problema no fatal (p. ej. Documentos)
 """
 
 import email.message
@@ -72,6 +72,11 @@ MAX_BYTES = 500 * 1024 * 1024          # tope por archivo
 BLOQUE = 64 * 1024
 # Tipos que indican que la URL NO es un audio (página de error, login, etc.).
 _TIPOS_NO_AUDIO = ("text/", "application/json", "application/xml", "application/xhtml")
+
+
+# Mensajes que ve el usuario al descargar un audio.
+MSG_DESCARGA_OK = "Se ha descargado correctamente"
+MSG_DESCARGA_ERROR = "Hubo un problema con la descarga, inténtelo de nuevo o más tarde"
 
 
 class DescargaError(Exception):
@@ -239,11 +244,10 @@ def descargar_grabacion(usuario_id: int, grabacion_id: int, on_completa=None, on
                 _en_principal(lambda: on_error(grabacion_id, error))
             return
 
-        aviso = None
+        aviso = MSG_DESCARGA_OK
         if GUARDAR_EN_DOCUMENTOS:
             try:
-                ubicacion = documentos.guardar_en_documentos(destino, _nombre_visible(grab, destino))
-                aviso = f"Guardado en {ubicacion}"
+                documentos.guardar_en_documentos(destino, _nombre_visible(grab, destino))
             except documentos.PermisoDenegadoError:
                 aviso = ("Sin permiso para guardar en Documentos. "
                          "La clase sigue disponible dentro de la app.")

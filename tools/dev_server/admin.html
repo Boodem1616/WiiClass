@@ -112,19 +112,6 @@
     </fieldset>
 
     <fieldset>
-      <legend>Funciones</legend>
-      <div id="funciones"></div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Reproductor</legend>
-      <label class="campo">Velocidades disponibles
-        <input type="text" id="velocidades">
-      </label>
-      <p class="ayuda">Números separados por comas, por ejemplo: 0.5, 1, 1.25, 1.5, 2</p>
-    </fieldset>
-
-    <fieldset>
       <legend>Textos</legend>
       <label class="campo">Saludo
         <input type="text" id="saludo">
@@ -177,44 +164,16 @@ function pintar() {
   sel.replaceChildren(...tipos.map((t) => new Option(t, t)));
   sel.value = a.tipo ?? "info";
 
-  const cont = $("funciones");
-  cont.replaceChildren();
-  for (const [clave, valor] of Object.entries(cfg.funciones || {})) {
-    const label = document.createElement("label");
-    label.className = "interruptor";
-    const nombre = document.createElement("span");
-    nombre.textContent = clave;
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = !!valor;
-    input.dataset.clave = clave;
-    const pista = document.createElement("span");
-    pista.className = "pista";
-    label.append(nombre, input, pista);
-    cont.append(label);
-  }
-
-  $("velocidades").value = ((cfg.reproductor || {}).velocidades || []).join(", ");
   $("saludo").value = (cfg.textos || {}).saludo ?? "";
   vista();
 }
 
 // Copia el formulario sobre cfg conservando cualquier clave que el formulario no muestre.
 function leer() {
-  const velocidades = $("velocidades").value
-    .split(/[,\s]+/).filter(Boolean).map(Number);
-  if (!velocidades.length || velocidades.some((n) => !Number.isFinite(n) || n <= 0)) {
-    throw new Error("Las velocidades deben ser números mayores que 0.");
-  }
   const intervalo = Number($("intervalo").value);
   if (!Number.isInteger(intervalo) || intervalo < 1) {
     throw new Error("El intervalo debe ser un entero de 1 o más.");
   }
-
-  const funciones = { ...(cfg.funciones || {}) };
-  document.querySelectorAll("#funciones input").forEach((i) => {
-    funciones[i.dataset.clave] = i.checked;
-  });
 
   return {
     ...cfg,
@@ -226,8 +185,6 @@ function leer() {
       titulo: $("anuncio_titulo").value,
       mensaje: $("anuncio_mensaje").value,
     },
-    funciones,
-    reproductor: { ...(cfg.reproductor || {}), velocidades },
     textos: { ...(cfg.textos || {}), saludo: $("saludo").value },
   };
 }

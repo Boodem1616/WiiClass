@@ -200,7 +200,7 @@ class TestFlujoCompleto(Base):
         with open(pub, "rb") as f:                              # copia visible al usuario
             self.assertEqual(f.read(), AUDIO)
         self.assertEqual(r["progreso"][-1], (len(AUDIO), len(AUDIO)))
-        self.assertTrue(any("Guardado en" in a for a in r["avisos"]))
+        self.assertIn(dm.MSG_DESCARGA_OK, r["avisos"])
         self.assertTrue(db.esta_descargada(gid))
 
     def test_error_de_red_no_registra_la_descarga(self):

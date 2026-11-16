@@ -5,7 +5,7 @@ App Android de grabaciones de clases (Kivy + KivyMD 2.0 + SQLite).
 Flujo:
   LoginScreen -> MainScreen (la barra depende del rol; ver ui/screens/main_screen.py)
     Estudiante: Inicio / [Descargas si offline] / Alertas / Perfil
-    Profesor:   Inicio / [Descargas si online] / Grabación / Alertas / Perfil
+    Profesor:   Inicio / [Descargas si offline] / Grabación / Alertas / Perfil
   HomeTab -> CategoryScreen -> PlayerScreen
   DownloadsTab -> PlayerScreen (mismo reproductor, archivo local)
 
@@ -298,8 +298,8 @@ class WiiClassApp(MDApp):
     def _aplicar_conectividad(self, offline: bool):
         main_screen = self.sm.get_screen("main")
         # Solo se reconstruye la barra si el conjunto de pestañas cambia
-        # (depende del rol: p. ej. Descargas aparece offline para el
-        # estudiante y online para el profesor).
+        # (depende del rol: Descargas aparece solo offline; Grabación
+        # solo existe para el profesor).
         esperadas = {n for n, _t, _i in tabs_para_rol(self.rol, offline)}
         if esperadas == main_screen.nombres_tabs():
             self.offline = offline

@@ -4,8 +4,8 @@
   "anuncio": {
     "activo": true,
     "tipo": "info",
-    "titulo": "Semana ",
-    "mensaje": "Test de anuncio."
+    "titulo": "Bienvenidos a nuestra Demo de Wiiclass",
+    "mensaje": "Espero que lo disfruten!"
   },
   "funciones": {
     "descargas": true,
