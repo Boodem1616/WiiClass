@@ -8,10 +8,10 @@ del proyecto.
 > **[código]** está implementado y se puede comprobar en el repositorio;
 > **[dato]** sale del archivo de datos que acompaña al proyecto;
 > **[interpretación]** es una lectura razonable, pero no está escrita en el
-> repositorio; **[COMPLETAR]** es información que el repositorio no contiene y
-> debe aportar el equipo. En particular, el repositorio **no documenta** qué
-> pasos formales tiene el método MJV más allá de lo que cita el código (§1), ni
-> contiene un estudio con usuarios reales (§4).
+> repositorio; **[equipo]** es contexto del proyecto que aporta el equipo y que
+> el repositorio no contiene. En particular, el repositorio **no contiene** un
+> estudio con usuarios reales (§4): los datos incluidos son de pruebas del
+> propio equipo.
 
 ---
 
@@ -33,8 +33,11 @@ eventos crudos  →  métricas descriptivas  →  KPIs  →  análisis de embudo
 
 El código y los docs también se refieren a esta etapa como "Sesión 25" y
 usan términos de clase ("anatomía" del evento, "desafío de lógica"), por lo que
-el método proviene del material del curso **[código]**. **[COMPLETAR]:** nombre
-oficial del método y fuente (curso, guía o autor) para citarla.
+el método proviene del material del curso **[código]**. **Referencia
+[equipo]:** método MJV, tal como se trabajó en la Sesión 25 del curso (eventos
+crudos → métricas descriptivas → KPIs → embudo). El repositorio no cita un
+autor ni una guía externa, así que la fuente a citar es el material de esa
+sesión.
 
 ---
 
@@ -58,9 +61,18 @@ que el estudiante no alcanza a seguir la clase y tomar apuntes a la vez, y la
 solución es grabar, escuchar después (incluso sin conexión) y que el profesor
 pueda grabar. Cada KPI mide una pieza de esa cadena: acceder (login), escuchar
 (reproducción), repasar offline (descargas) y producir contenido (grabaciones).
-**[COMPLETAR]:** si el equipo definió metas o umbrales (por ejemplo "≥ 90 % de
-descargas exitosas"), anotarlos aquí; el código no define metas, salvo la del
-embudo.
+**Metas de referencia [equipo]:** el código no define metas, salvo la del
+embudo (§2.3). Para poder declarar éxito o fracaso, se proponen estas metas,
+razonadas con el problema que resuelve la app; son un criterio de evaluación
+de este documento y **no están implementadas** en `kpis()`:
+
+| KPI | Meta de referencia | Razón |
+|---|---|---|
+| Tasa de login exitoso | ≥ 90 % | Si el acceso falla más de 1 de cada 10 veces, se vuelve una barrera antes de llegar al contenido |
+| Clases abiertas que se reproducen | ≥ 70 % | Quien abre una clase lo hace para escucharla; un valor bajo indicaría que el reproductor no es evidente |
+| Clases distintas escuchadas | ≥ 50 % del catálogo disponible | Indica que se usa más de una clase y no solo la primera que aparece |
+| Tasa de descarga exitosa | ≥ 90 % | El uso sin conexión solo ayuda si la descarga es confiable con WiFi inestable |
+| Grabaciones guardadas | ≥ 1 por semana de clases | Mide que el Profesor realmente alimenta la app |
 
 ### 2.2 Métricas descriptivas (paso 2)
 
@@ -170,16 +182,25 @@ con una verificación de la función de notificaciones, no con un estudio de uso
 **[interpretación]**.
 
 Por lo tanto, el repositorio **no permite afirmar** un periodo de recolección
-de días o semanas, ni un número de participantes. **[COMPLETAR]**, si hubo una
-recolección real:
+de días o semanas, ni un número de participantes. Lo que sí se puede declarar
+con lo que contiene el proyecto **[dato]** / **[equipo]**:
 
 | Dato | Valor |
 |---|---|
-| Fecha de inicio y fin del periodo | |
-| Participantes (cantidad y perfil: estudiantes / profesores, curso) | |
-| Dispositivos / plataforma (Android, escritorio) | |
-| Cómo se obtuvieron los archivos de cada dispositivo | |
-| Cantidad de sesiones y eventos totales | |
+| Fecha de inicio y fin del periodo | 4 de noviembre de 2026, 12:23:57 – 12:25:35 (≈ 98 s). Es una única sesión de prueba, no un periodo de semanas |
+| Participantes (cantidad y perfil) | 0 usuarios externos. La sesión la hizo el equipo de desarrollo con el rol Estudiante (usuario demo) |
+| Dispositivos / plataforma | 1 equipo de escritorio con Linux. No hay datos de Android |
+| Cómo se obtuvieron los archivos | Se copió `datos/analytics.json` de la carpeta del proyecto tras la prueba (no hubo envío a servidor, §3.2) |
+| Cantidad de sesiones y eventos totales | 1 sesión y 22 eventos |
+
+Una prueba posterior (15 de noviembre de 2026, `datos/analytics.json` incluido
+en el proyecto) tiene 1 sesión y 11 eventos en ≈ 18 s, también en Linux y solo
+con login, inicio y perfil. Tampoco es un estudio de uso.
+
+La medición, por tanto, queda como **instrumentación lista y verificada con
+pruebas del equipo**, no como resultados de uso. Para obtener un periodo real
+basta seguir §5 con estudiantes y profesores; la estructura de esta sección se
+mantiene y solo cambian los valores de la tabla.
 
 ### 4.3 Resultado del análisis sobre la muestra disponible
 
@@ -225,7 +246,12 @@ categoría. **No debe leerse como un hallazgo de usabilidad.**
   (acceder, escuchar, descargar, grabar). Ninguno mide el efecto sobre el
   aprendizaje (notas, comprensión, tiempo ahorrado, satisfacción). Para hablar
   de impacto hace falta evidencia adicional, por ejemplo una encuesta o una
-  comparación antes/después. **[COMPLETAR]** si el equipo la tiene.
+  comparación antes/después. **[equipo]** La única evidencia con usuarios es la
+  encuesta diagnóstica previa (16 estudiantes, ver
+  [`../ux/FUNDAMENTACION-UX-UI.md`](../ux/FUNDAMENTACION-UX-UI.md)); sirvió
+  para diseñar la app, no para medir su efecto. Una encuesta posterior con las
+  mismas preguntas (conectividad, almacenamiento, seguimiento de clases)
+  permitiría comparar antes/después.
 - **Sin identificador de usuario** (por privacidad): no hay usuarios únicos,
   retención ni uso repetido por persona; solo sesiones.
 - **La "sesión" es una apertura de la app**; su duración es el tiempo entre el
