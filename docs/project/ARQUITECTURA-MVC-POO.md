@@ -5,10 +5,6 @@ conceptos de POO en el código actual. Cada afirmación apunta a un archivo, una
 clase o una función real. Al final hay una sección de límites: lugares donde el
 código se aparta del MVC "de manual".
 
-> Kivy no impone MVC. Aquí se aplica **por convención de carpetas y
-> responsabilidades**: las pantallas se describen en `.kv`, su lógica vive en
-> clases Python, y los datos y servicios están separados de la interfaz.
-
 ---
 
 ## 1. MVC: visión general

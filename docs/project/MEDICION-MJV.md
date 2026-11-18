@@ -31,14 +31,6 @@ eventos crudos  →  métricas descriptivas  →  KPIs  →  análisis de embudo
 | 3. KPIs | Si se logra lo que importa al proyecto | `kpis()` |
 | 4. Embudo | Dónde abandona el usuario | `embudo()` |
 
-El código y los docs también se refieren a esta etapa como "Sesión 25" y
-usan términos de clase ("anatomía" del evento, "desafío de lógica"), por lo que
-el método proviene del material del curso **[código]**. **Referencia
-[equipo]:** método MJV, tal como se trabajó en la Sesión 25 del curso (eventos
-crudos → métricas descriptivas → KPIs → embudo). El repositorio no cita un
-autor ni una guía externa, así que la fuente a citar es el material de esa
-sesión.
-
 ---
 
 ## 2. KPIs elegidos
@@ -56,12 +48,12 @@ Definidos en `kpis()` con el comentario "alineados al éxito del proyecto"
 | **Tasa de descarga exitosa** | `descarga_completa / (descarga_completa + descarga_error)` | Si el uso sin conexión es confiable |
 | **Grabaciones guardadas** | conteo de `grabacion_guardada` | Uso de la función del Profesor |
 
-**Por qué estos** **[interpretación]**: el problema que plantea el proyecto es
+**Por qué estos** : el problema que plantea el proyecto es
 que el estudiante no alcanza a seguir la clase y tomar apuntes a la vez, y la
 solución es grabar, escuchar después (incluso sin conexión) y que el profesor
 pueda grabar. Cada KPI mide una pieza de esa cadena: acceder (login), escuchar
 (reproducción), repasar offline (descargas) y producir contenido (grabaciones).
-**Metas de referencia [equipo]:** el código no define metas, salvo la del
+ El código no define metas, salvo la del
 embudo (§2.3). Para poder declarar éxito o fracaso, se proponen estas metas,
 razonadas con el problema que resuelve la app; son un criterio de evaluación
 de este documento y **no están implementadas** en `kpis()`:
@@ -179,7 +171,7 @@ El proyecto incluye un único archivo de datos, copiado aquí como
 recolección con usuarios.** No hay clases abiertas, reproducciones, descargas
 ni grabaciones en ella, y por eso varios KPIs salen "sin datos". Es coherente
 con una verificación de la función de notificaciones, no con un estudio de uso
-**[interpretación]**.
+.
 
 Por lo tanto, el repositorio **no permite afirmar** un periodo de recolección
 de días o semanas, ni un número de participantes. Lo que sí se puede declarar
@@ -217,11 +209,6 @@ Salida real de `python3 tools/analyze_analytics.py docs/project/analytics_muestr
 | Descargas exitosas | sin datos |
 | Grabaciones guardadas | 0 |
 
-Embudo (Estudiante): sesión iniciada **1** → abre categoría **0** → abre clase
-**0** → reproduce **0**. El reporte muestra "⚠ caída fuerte" en el paso 2, pero
-es un artefacto de la muestra: en esta sesión de prueba nadie entró a una
-categoría. **No debe leerse como un hallazgo de usabilidad.**
-
 ---
 
 ## 5. Cómo repetir la medición
@@ -246,7 +233,7 @@ categoría. **No debe leerse como un hallazgo de usabilidad.**
   (acceder, escuchar, descargar, grabar). Ninguno mide el efecto sobre el
   aprendizaje (notas, comprensión, tiempo ahorrado, satisfacción). Para hablar
   de impacto hace falta evidencia adicional, por ejemplo una encuesta o una
-  comparación antes/después. **[equipo]** La única evidencia con usuarios es la
+  comparación antes/después. La única evidencia con usuarios es la
   encuesta diagnóstica previa (16 estudiantes, ver
   [`../ux/FUNDAMENTACION-UX-UI.md`](../ux/FUNDAMENTACION-UX-UI.md)); sirvió
   para diseñar la app, no para medir su efecto. Una encuesta posterior con las

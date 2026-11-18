@@ -1,12 +1,5 @@
 # Revisión de diseño y errores — WiiClass
 
-> **Nota (reorganización):** las rutas citadas en este documento corresponden a la estructura anterior del proyecto. Equivalencias en [`../technical/IMPLEMENTACION.md`](../technical/IMPLEMENTACION.md#equivalencias-con-la-estructura-anterior).
-
-> **Importante:** en mi entorno no pude instalar Kivy/KivyMD, así que **no ejecuté la app**.
-> Verifiqué que todo el Python compila, que la indentación de los `.kv` es válida, que cada
-> `ids.xxx` que usa el código existe en su `.kv`, y probé las consultas nuevas de `db.py`
-> con una base temporal. El aspecto visual y los puntos marcados con ⚠️ hay que revisarlos
-> corriendo `python3 main.py`.
 
 ## 1. Rediseño (azul, "tinta sobre papel")
 
@@ -65,12 +58,3 @@
    "Clase 3 - Derivadas", que no existen en las categorías del seed.
 7. "Estudiante de Pregrado" está fijo en el código; debería venir de la BD.
 8. Falta `buildozer.spec` (el README lo menciona pero no está en el zip).
-
-## 4. ⚠️ Puntos a verificar al ejecutar
-
-- Indicador/colores de la pestaña activa en la barra inferior: uso propiedades
-  (`active_indicator_color`, `icon_color_active`, …) solo si existen en tu versión de KivyMD.
-- El botón play usa `theme_font_size: "Custom"`; si tu versión no lo soporta, el ícono se verá
-  del tamaño por defecto dentro del círculo (no rompe nada).
-- La "hoja redondeada" (`<Hoja>` en `common.kv`) pinta un rectángulo redondeado que se extiende
-  30 dp hacia abajo para ocultar sus esquinas inferiores tras la barra de navegación.

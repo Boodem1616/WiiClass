@@ -9,8 +9,6 @@ Qué agrega esta entrega a WiiClass:
 3. **`buildozer.spec`** listo para generar el APK de Android, y un script para
    dejar lista la carpeta en la app *Archivos* de iOS.
 
-> **Sobre el nombre "Bulldozer":** la herramienta que empaqueta apps Kivy para
-> Android/iOS se llama **Buildozer**. Este documento asume que te referías a esa.
 
 ## Decisión de stack: se mantiene Kivy + KivyMD + Buildozer
 
@@ -155,31 +153,3 @@ python3 -m pytest -q tests          # 117 pruebas, no requieren Kivy
   Buildozer 1.6.0.
 - Las 71 pruebas que ya existían siguen pasando.
 
-**NO comprobado (necesita un dispositivo o sistema real):**
-
-- **Ninguna build de APK/IPA se ejecutó**: el entorno donde se desarrolló esto
-  no puede descargar el SDK/NDK de Android. Es posible que la primera build
-  requiera ajustar versiones (NDK, receta de KivyMD/materialyoucolor).
-- **El código de Android usa un `jnius` simulado en las pruebas**: valida el
-  flujo (IS_PENDING, copia, reintento, limpieza), no que Android acepte cada
-  llamada. Hay que probarlo en un teléfono, idealmente uno con Android 10+ y
-  otro con Android 9 o menos.
-- **Windows**: la llamada a `SHGetKnownFolderPath` no se pudo ejecutar fuera
-  de Windows (las pruebas simulan su resultado y su fallo).
-- **iOS**: el guardado y el script del plist están probados, pero **la app
-  completa todavía no está portada a iOS**: `wiiclass/data/db.py` y `storage.py` escriben
-  junto al código (en iOS el paquete es de solo lectura) y `wiiclass/services/recorder.py` no
-  tiene backend para iOS. Hay que moverlos a `~/Library/Application Support`
-  antes de ejecutar la app en un iPhone.
-- Empaquetado de escritorio como instalador (`.exe`, `.dmg`): Buildozer no lo
-  cubre; se haría con PyInstaller u otra herramienta.
-
-## Checklist de aceptación en dispositivo
-
-- [ ] Android 10+: descargar una clase → aparece en *Archivos → Documentos → WiiClass* sin pedir permisos.
-- [ ] Android 9 o menor: el sistema pide permiso de almacenamiento y luego guarda.
-- [ ] Android: denegar el permiso (9-) → la clase igual se reproduce offline y se muestra el aviso.
-- [ ] Descargar dos veces el mismo audio → no se pisa (`Clase (1).mp3`).
-- [ ] URL que devuelve una página web → mensaje de error, sin archivo guardado.
-- [ ] iOS: el audio aparece en *Archivos → En mi iPhone → WiiClass*.
-- [ ] Desktop Windows: aparece en la carpeta Documentos real (aunque esté en OneDrive).
