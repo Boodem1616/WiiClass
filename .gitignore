@@ -11,3 +11,5 @@ grabaciones/
 datos/
 .pytest_cache/
 .venv/
+build.log
+crash.log

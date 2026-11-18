@@ -56,6 +56,95 @@ except Exception:
     from kivy.core.audio import SoundLoader
 
 
+def _es_android() -> bool:
+    from kivy.utils import platform
+    return platform == "android"
+
+
+class _AndroidSound:
+    """Reproductor nativo (android.media.MediaPlayer vía pyjnius).
+
+    Expone la misma interfaz mínima que `kivy.core.audio.Sound` que usa el
+    motor (play/stop/seek/get_pos/length/unload) y añade `set_speed`.
+    Se usa en Android cuando no hay ffpyplayer: el SDL2_mixer que trae
+    Kivy en Android no siempre decodifica mp3 y deja la salida en silencio.
+    """
+
+    def __init__(self, ruta: str):
+        from jnius import autoclass
+        self._autoclass = autoclass
+        self._mp = autoclass("android.media.MediaPlayer")()
+        self._mp.setDataSource(ruta)
+        self._mp.prepare()  # síncrono: se llama desde el hilo de trabajo
+        self._speed = 1.0
+        self._liberado = False
+
+    @property
+    def length(self) -> float:
+        return self._mp.getDuration() / 1000.0
+
+    def _aplicar_velocidad(self):
+        # En algunas versiones de Android, setPlaybackParams() con el
+        # reproductor en pausa lo pone a sonar. Por eso solo se aplica
+        # mientras suena (ver play() y set_speed()).
+        try:
+            params = self._autoclass("android.media.PlaybackParams")()
+            params.setSpeed(float(self._speed))
+            self._mp.setPlaybackParams(params)
+        except Exception as exc:
+            print(f"[audio_player] No se pudo cambiar la velocidad: {exc}")
+
+    def play(self):
+        if self._liberado:
+            return
+        self._mp.start()
+        if self._speed != 1.0:
+            self._aplicar_velocidad()
+
+    def stop(self):
+        # El motor usa stop() como "pausa": se conserva la posición.
+        if self._liberado:
+            return
+        try:
+            if self._mp.isPlaying():
+                self._mp.pause()
+        except Exception:
+            pass
+
+    def seek(self, segundos: float):
+        if not self._liberado:
+            self._mp.seekTo(int(max(0.0, segundos) * 1000))
+
+    def get_pos(self) -> float:
+        if self._liberado:
+            return 0.0
+        return self._mp.getCurrentPosition() / 1000.0
+
+    def set_speed(self, velocidad: float):
+        self._speed = float(velocidad)
+        if not self._liberado and self._mp.isPlaying():
+            self._aplicar_velocidad()
+
+    def unload(self):
+        if self._liberado:
+            return
+        self._liberado = True
+        try:
+            self._mp.release()
+        except Exception:
+            pass
+
+
+def _cargar_sonido(ruta: str):
+    """Android: MediaPlayer nativo; si falla (o en escritorio), SoundLoader."""
+    if _es_android():
+        try:
+            return _AndroidSound(ruta)
+        except Exception as exc:
+            print(f"[audio_player] MediaPlayer nativo falló ({exc}); uso SoundLoader")
+    return SoundLoader.load(ruta)
+
+
 class AudioEngine(EventDispatcher):
     """Motor único de audio, controlado por la pantalla del reproductor."""
 
@@ -148,7 +237,7 @@ class AudioEngine(EventDispatcher):
                     print(f"[audio_player] Aviso al cerrar el reproductor anterior: {exc}")
 
             if not FFPYPLAYER_AVAILABLE:
-                sound = SoundLoader.load(source)
+                sound = _cargar_sonido(source)
                 Clock.schedule_once(
                     lambda dt: self._on_sound_ready(my_token, sound, start_at, resume_playing)
                 )
@@ -225,6 +314,8 @@ class AudioEngine(EventDispatcher):
         self.is_loading = False
         if sound:
             self.duration = sound.length or self.duration
+            if hasattr(sound, "set_speed"):
+                sound.set_speed(self.speed)
             if start_at > 0:
                 sound.seek(start_at)
             if resume_playing:
@@ -298,6 +389,8 @@ class AudioEngine(EventDispatcher):
             # cambie de velocidad varias veces seguidas, cada cierre+
             # apertura espera su turno en el único hilo de trabajo.
             self._encolar_apertura(old_player, start_at=resume_at, resume_playing=was_playing)
+        elif self._sound is not None and hasattr(self._sound, "set_speed"):
+            self._sound.set_speed(speed)  # MediaPlayer nativo (Android)
         # SoundLoader (fallback de escritorio) no soporta cambio de velocidad.
 
     def stop(self):

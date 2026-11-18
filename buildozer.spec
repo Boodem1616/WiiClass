@@ -14,7 +14,7 @@ version = 0.1.0
 # Código fuente
 # ---------------------------------------------------------------------------
 source.dir = .
-source.include_exts = py,kv,png,jpg,atlas,mp3,json
+source.include_exts = py,kv,png,jpg,atlas,mp3,json,ttf,wav
 # Entra al APK: main.py, wiiclass/ (código y .kv) y assets/audio.
 # No se empaqueta lo que se genera en tiempo de ejecución ni lo de desarrollo:
 # la BD y los JSON se crean al primer arranque (db.init_db / storage), los
@@ -35,7 +35,7 @@ source.exclude_patterns = *.db, *.md
 # KivyMD 2.0 necesita estas dependencias puras de Python. Si la build falla al
 # resolver kivymd==2.0.0, prueba con la rama de desarrollo:
 #   https://github.com/kivymd/KivyMD/archive/master.zip
-requirements = python3,kivy==2.3.1,kivymd==2.0.0,materialyoucolor,exceptiongroup,asyncgui,asynckivy,pillow,ffpyplayer,pyjnius,android,plyer,sqlite3,openssl,certifi
+requirements = python3,kivy==2.3.1,kivymd==2.0.0,materialyoucolor,exceptiongroup,asyncgui,asynckivy,pillow,pyjnius,android,sqlite3,openssl,certifi
 
 orientation = portrait
 fullscreen = 0
@@ -56,9 +56,10 @@ android.permissions = android.permission.INTERNET, android.permission.RECORD_AUD
 # API 36 (Google Play exige targetSdk 36 para apps nuevas y actualizaciones
 # desde el 31-08-2026). Para pruebas/sideload local sirven igual.
 p4a.branch = develop
+p4a.local_recipes = ./recipes
 android.api = 36
 android.minapi = 24
-android.ndk = 29
+android.ndk = 28c
 android.archs = arm64-v8a, armeabi-v7a
 android.accept_sdk_license = True
 
